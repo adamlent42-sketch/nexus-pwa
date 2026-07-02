@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Phone } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Field, TextInput, TextArea } from "@/components/ui/Field";
+import { Field, TextInput, TextArea, inputBase } from "@/components/ui/Field";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { useLogConversation } from "@/lib/mutations";
 import { useToast } from "@/lib/toast";
@@ -34,7 +34,6 @@ export function LogConversationModal({ open, onClose }: Props) {
   const [date, setDate] = useState(todayLocal());
   const [notes, setNotes] = useState("");
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useLogConversation();
   const toast = useToast();
@@ -48,7 +47,6 @@ export function LogConversationModal({ open, onClose }: Props) {
       setType("Phone Call");
       setDate(todayLocal());
       setNotes("");
-      setTimeout(() => inputRef.current?.focus(), 50);
     }
   }, [open]);
 
@@ -80,7 +78,6 @@ export function LogConversationModal({ open, onClose }: Props) {
     setSelected(null);
     setQuery("");
     setResults([]);
-    setTimeout(() => inputRef.current?.focus(), 50);
   };
 
   const submit = async () => {
@@ -140,11 +137,14 @@ export function LogConversationModal({ open, onClose }: Props) {
           </div>
         ) : (
           <div className="relative">
-            <TextInput
-              ref={inputRef}
+            {/* Plain <input> so we can use autoFocus without forwardRef */}
+            <input
+              autoFocus
+              type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Type a student name..."
+              className={inputBase}
             />
             {(results.length > 0 || searching) && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface border border-line rounded shadow-lg max-h-52 overflow-y-auto">
@@ -197,8 +197,8 @@ export function LogConversationModal({ open, onClose }: Props) {
       </Field>
 
       <p className="text-[11px] text-ink-tertiary">
-        Logs a Communications record and updates Last Contact Date immediately.
-        Notes are picked up by the email worker when drafting future messages to this family.
+        Logs a Communications record, updates Last Contact Date immediately, and
+        appends to the family&apos;s context so future email drafts can reference the conversation.
       </p>
     </Modal>
   );

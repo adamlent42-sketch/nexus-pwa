@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 
 // POST /api/admin/log-conversation
 // Records a non-email touch (face-to-face conversation, phone call) for a
-// student by writing a Communications row. This resets the student's
-// Last Contact Date rollup so the outreach cadence picks up the most
-// recent conversation.
+// student by writing a Communications row, stamping Last Contact Date on the
+// student immediately, and prepending a summary line to the Family's
+// Relationship Summary so the email worker can reference the conversation.
 const Body = z.object({
   studentId: z.string().min(1),
   type: z.enum(["In Person", "Phone Call"]),
@@ -62,6 +62,23 @@ export async function POST(req: NextRequest) {
       "Last Contact Date": effectiveDate,
       "Last Contact Type": type
     }, { typecast: true });
+
+    // Prepend a line to the Family's Relationship Summary so the email worker
+    // can reference this conversation when drafting future messages.
+    if (familyLinks.length) {
+      const familyId = familyLinks[0];
+      const family = await airtable()(TABLE.Families).find(familyId);
+      const existing = (family.get("Relationship Summary") as string | undefined) ?? "";
+      const studentFirstName = (student.get("First Name") as string | undefined)
+        ?? (student.get("Student Name") as string | undefined)?.split(" ")[0]
+        ?? "student";
+      const notesLine = notes?.trim() ? ` — ${notes.trim()}` : "";
+      const newEntry = `[${effectiveDate} ${type}] ${studentFirstName}${notesLine}`;
+      const updated = existing ? `${newEntry}\n${existing}` : newEntry;
+      await airtable()(TABLE.Families).update(familyId, {
+        "Relationship Summary": updated
+      }, { typecast: true });
+    }
 
     return NextResponse.json({
       ok: true,
