@@ -1,0 +1,7 @@
+.env.local
+.env.local.example
+README.md
+PHASE-1-PLAN.md
+*.log
+.next
+node_modules

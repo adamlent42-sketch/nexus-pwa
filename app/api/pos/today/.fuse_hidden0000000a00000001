@@ -1,0 +1,103 @@
+import { NextResponse } from "next/server";
+import { airtable, TABLE } from "@/lib/airtable";
+import { todayInET, nowInET, parseTime12h } from "@/lib/time";
+import type { PORow, ApiResponse } from "@/types/kumon";
+
+export const dynamic = "force-dynamic";
+
+// Returns the PO action queue:
+//   1. Today's POs (any status)
+//   2. Future POs (next 30 days, excluding Family/Instructor Cancelled)
+//   3. Past POs with NO recap submitted yet (last 14 days, Attended/Not Attended only).
+//      Once staff submits a recap, the PO disappears from the staff dashboard
+//      and lives only in Admin → PO recaps until Adam marks it Reviewed.
+// Family Cancelled and Instructor Cancelled never appear — no recap action needed.
+export async function GET() {
+  try {
+    const today = todayInET();
+    const now = nowInET();
+
+    const records = await airtable()(TABLE.POs)
+      .select({
+        filterByFormula: `OR(
+          IS_SAME({PO Date}, '${today}', 'day'),
+          AND(
+            IS_AFTER({PO Date}, '${today}'),
+            IS_BEFORE({PO Date}, DATEADD('${today}', 30, 'days')),
+            NOT({Status} = 'Family Cancelled'),
+            NOT({Status} = 'Instructor Cancelled')
+          ),
+          AND(
+            IS_BEFORE({PO Date}, '${today}'),
+            IS_AFTER({PO Date}, DATEADD('${today}', -14, 'days')),
+            NOT({Recap Status}),
+            NOT({Status} = 'Family Cancelled'),
+            NOT({Status} = 'Instructor Cancelled')
+          )
+        )`,
+        sort: [{ field: "PO Date", direction: "asc" }, { field: "PO Time", direction: "asc" }],
+        fields: [
+          "PO Date", "PO Time", "Student Display", "Grade",
+          "Status", "Outcome", "Subject Interest",
+          "Parent Phone", "Booking Source", "Recap Status"
+        ]
+      })
+      .all();
+
+    const pos: PORow[] = records.map((r) => {
+      const time = (r.get("PO Time") as string | null) ?? "";
+      const date = (r.get("PO Date") as string | null) ?? today;
+      const recapStatus = (r.get("Recap Status") as string | null) ?? null;
+      const status = (r.get("Status") as string | null) ?? "Scheduled";
+
+      let isOverdueRecap = false;
+      if (!recapStatus) {
+        if (date < today) {
+          isOverdueRecap = true;
+        } else if (date === today && time) {
+          const t24 = parseTime12h(time);
+          if (t24) {
+            const poDateTime = `${today}T${t24}`;
+            isOverdueRecap = now > poDateTime;
+          }
+        }
+      }
+
+      return {
+        id: r.id,
+        time,
+        date,
+        student: (r.get("Student Display") as string | null) ?? "(unnamed)",
+        grade: (r.get("Grade") as string | null) ?? null,
+        subjects: ((r.get("Subject Interest") as string[] | undefined) ?? []) as string[],
+        phone: (r.get("Parent Phone") as string | null) ?? null,
+        source: (r.get("Booking Source") as string | null) ?? null,
+        status,
+        recapStatus,
+        isOverdueRecap
+      };
+    });
+
+    // Sort: backlog first (oldest past → newest), then today, then upcoming (soonest first)
+    pos.sort((a, b) => {
+      const ad = a.date ?? today;
+      const bd = b.date ?? today;
+      const aBucket = ad < today ? 0 : ad === today ? 1 : 2;
+      const bBucket = bd < today ? 0 : bd === today ? 1 : 2;
+      if (aBucket !== bBucket) return aBucket - bBucket;
+      // within bucket, sort by date asc, then by actual start time.
+      if (a.date !== b.date) return (a.date || "").localeCompare(b.date || "");
+      // Compare on parsed 24h time so "9:00 AM" precedes "10:30 AM" (a raw
+      // string compare would sort "10:30 AM" first). Empty/unparseable times sink last.
+      const at = parseTime12h(a.time) ?? "99:99";
+      const bt = parseTime12h(b.time) ?? "99:99";
+      return at.localeCompare(bt);
+    });
+
+    const body: ApiResponse<PORow[]> = { ok: true, data: pos };
+    return NextResponse.json(body);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
+  }
+}

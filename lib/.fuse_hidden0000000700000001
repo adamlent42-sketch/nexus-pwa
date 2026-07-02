@@ -1,0 +1,155 @@
+"use client";
+
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+interface ApiOk<T> { ok: true; data: T }
+interface ApiErr { ok: false; error: string }
+type ApiResp<T> = ApiOk<T> | ApiErr;
+
+async function postJson<T>(url: string, body: unknown, method: "POST" | "PATCH" = "POST"): Promise<T> {
+  const res = await fetch(url, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  const json = (await res.json()) as ApiResp<T>;
+  if (!json.ok) throw new Error(json.error);
+  return json.data;
+}
+
+export function useCreateStaffAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/alerts", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] })
+  });
+}
+
+export function useUpdateStaffAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
+      postJson<{ id: string }>(`/api/alerts/${id}`, body, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] })
+  });
+}
+
+export function useAcknowledgeAlert() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, acknowledgedBy }: { id: string; acknowledgedBy?: string }) =>
+      postJson<{ id: string }>(`/api/alerts/${id}/acknowledge`, { acknowledgedBy }, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["alerts"] })
+  });
+}
+
+export function useCreateInstructionNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/instruction-notes", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["instruction-notes"] })
+  });
+}
+
+export function useUpdateInstructionNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...body }: { id: string } & Record<string, unknown>) =>
+      postJson<{ id: string }>(`/api/instruction-notes/${id}`, body, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["instruction-notes"] })
+  });
+}
+
+export function useCreatePickup() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/pickup-notifications", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pickup"] })
+  });
+}
+
+export function useCreateTimeOff() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/time-off", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["time-off"] })
+  });
+}
+
+export function useMarkOut() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ staffId, date }: { staffId: string; date?: string }) =>
+      postJson<{ id: string }>("/api/staff/mark-out", { staffId, date }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["staff"] });
+      qc.invalidateQueries({ queryKey: ["coverage"] });
+    }
+  });
+}
+
+export function useCreateUpdateEmail() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/update-email-requests", body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["update-emails"] });
+      qc.invalidateQueries({ queryKey: ["admin", "student-outreach"] });
+      // Lead Follow-up tab tracks pending update requests so its "Draft email"
+      // button disables once one is queued.
+      qc.invalidateQueries({ queryKey: ["admin", "lead-outreach"] });
+    }
+  });
+}
+
+export function useCreateAchievementTest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/progress-events", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["progress-events"] })
+  });
+}
+
+export function useSubmitPORecap() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ poId, ...body }: { poId: string } & Record<string, unknown>) =>
+      postJson<{ id: string }>(`/api/pos/${poId}/recap`, body, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos"] })
+  });
+}
+
+export function useUpdateStudentSchedule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ studentId, schedule, plannedStartDate }: { studentId: string; schedule?: string[]; plannedStartDate?: string | null }) =>
+      postJson<{ id: string }>(`/api/students/${studentId}/schedule`, { schedule, plannedStartDate }, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["students"] })
+  });
+}
+
+export function useCreatePickupNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: unknown) => postJson<{ id: string }>("/api/pickup-notifications", body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pickup"] })
+  });
+}
+
+export function useCloseNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, closingNote, completedBy }: { id: string; closingNote: string; completedBy?: string }) =>
+      postJson<{ id: string }>(`/api/instruction-notes/${id}/close`, { closingNote, completedBy }, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["instruction-notes"] })
+  });
+}
+
+export function useSnoozeNote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, snoozedUntil }: { id: string; snoozedUntil: string }) =>
+      postJson<{ id: string }>(`/api/instruction-notes/${id}/snooze`, { snoozedUntil }, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["instruction-notes"] })
+  });
+}
