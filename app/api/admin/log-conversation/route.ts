@@ -56,6 +56,13 @@ export async function POST(req: NextRequest) {
       }
     ], { typecast: true });
 
+    // Stamp Last Contact Date + Type directly on the student so it's
+    // immediately visible — don't wait for the nightly comms-outbox-sync.
+    await airtable()(TABLE.Students).update(studentId, {
+      "Last Contact Date": effectiveDate,
+      "Last Contact Type": type
+    }, { typecast: true });
+
     return NextResponse.json({
       ok: true,
       data: { id: created[0]?.id ?? null, date: effectiveDate, type }

@@ -4,10 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useQuery } from "@tanstack/react-query";
-import { LayoutDashboard, ArrowRight, CheckCircle2, Maximize2 } from "lucide-react";
+import { LayoutDashboard, ArrowRight, CheckCircle2, Maximize2, MessageSquare } from "lucide-react";
 import { adminFetch } from "@/lib/admin-fetch";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
+import { LogConversationModal } from "@/components/forms/LogConversationModal";
 import type { MonthStat } from "@/app/api/admin/monthly-stats/route";
 import type { EnrollmentReportStat } from "@/app/api/admin/enrollment-report/route";
 
@@ -169,6 +170,7 @@ export default function AdminHome() {
   });
 
   const [chartFullscreen, setChartFullscreen] = useState(false);
+  const [logConvOpen, setLogConvOpen] = useState(false);
 
   const d = attention.data;
   const order = { red: 0, yellow: 1, green: 2 } as const;
@@ -188,6 +190,19 @@ export default function AdminHome() {
 
   return (
     <div className="space-y-6">
+
+      {/* ── Quick actions ── */}
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => setLogConvOpen(true)}
+          className="btn inline-flex items-center gap-2 text-[13px]"
+        >
+          <MessageSquare className="w-4 h-4" />
+          Log a conversation
+        </button>
+      </div>
+
+      <LogConversationModal open={logConvOpen} onClose={() => setLogConvOpen(false)} />
 
       {/* ── Charts row: POs trend + Report B side by side ── */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">

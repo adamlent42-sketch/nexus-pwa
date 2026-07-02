@@ -169,6 +169,18 @@ export function useCloseNote() {
   });
 }
 
+export function useLogConversation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { studentId: string; type: string; date: string; notes?: string }) =>
+      postJson<{ id: string; date: string; type: string }>("/api/admin/log-conversation", body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["students"] });
+      qc.invalidateQueries({ queryKey: ["admin", "attention"] });
+    }
+  });
+}
+
 export function useSnoozeNote() {
   const qc = useQueryClient();
   return useMutation({
