@@ -115,11 +115,14 @@ export function PORecapForm({ open, onClose, po }: Props) {
 
   const nonAttendedMessage = (() => {
     if (!status || status === "Attended" || status === "Scheduled") return null;
-    if (status === "Family Cancelled" || status === "Not Attended") {
-      return "Submitting this recap auto-moves the linked student to PO No-Show. No owner review needed - the outreach automation will draft a re-engagement email on its next run.";
+    if (status === "Not Attended") {
+      return "Family didn't show up — auto-moves to PO No-Show. No owner review needed. Outreach will offer to reschedule (3 follow-ups over 45 days).";
+    }
+    if (status === "Family Cancelled") {
+      return "Family called ahead to cancel — auto-moves to PO Cancelled. No owner review needed. Outreach will send a gentle win-back sequence (4 touches over 30 days).";
     }
     if (status === "Instructor Cancelled") {
-      return "Linked student stays at PO Booked — we owe them a new PO.";
+      return "We cancelled on them — linked student stays at PO Booked. We owe them a new PO; please create one.";
     }
     if (status === "Rescheduled") {
       return "Create a new PO record for the rescheduled date. This one will close out.";
@@ -159,11 +162,23 @@ export function PORecapForm({ open, onClose, po }: Props) {
 
       <Field label="Status" required>
         <ChipGroup value={status} onChange={setStatus} options={PO_STATUSES} />
+        <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-[11px] text-ink-tertiary border-t border-line pt-2">
+          <div><span className="font-medium text-ink-secondary">Attended</span> — family came in for the PO</div>
+          <div><span className="font-medium text-ink-secondary">Not Attended</span> — family didn&apos;t show, no call ahead</div>
+          <div><span className="font-medium text-ink-secondary">Family Cancelled</span> — family called ahead to cancel</div>
+          <div><span className="font-medium text-ink-secondary">Instructor Cancelled</span> — we had to cancel on them</div>
+          <div><span className="font-medium text-ink-secondary">Rescheduled</span> — new date agreed; create a new PO for that date</div>
+        </div>
       </Field>
 
       {status === "Attended" && (
         <Field label="Outcome" required hint="required when Attended">
           <ChipGroup value={outcome} onChange={setOutcome} options={ATTENDED_OUTCOMES} />
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-1 text-[11px] text-ink-tertiary border-t border-line pt-2">
+            <div><span className="font-medium text-ink-secondary">Plan to Enroll</span> — wants to enroll; fill in start date below if you have one</div>
+            <div><span className="font-medium text-ink-secondary">Undecided</span> — interested but not committing today; system will follow up gently</div>
+            <div><span className="font-medium text-ink-secondary">Not Interested</span> — definite no; no further outreach will be sent</div>
+          </div>
         </Field>
       )}
 
