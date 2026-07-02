@@ -378,7 +378,7 @@ export default function POAdminPage() {
                     });
                     if (!isHistory) quickArchive(po);
                   }}
-                  className="btn btn-primary inline-flex items-center gap-1 text-[12px]"
+                  className="btn inline-flex items-center gap-1 text-[12px]"
                   title={isHistory ? "Queue re-schedule email" : "Send re-schedule email and archive"}
                 >
                   <Send className="w-3 h-3" />
