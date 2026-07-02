@@ -95,7 +95,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Use the outcome from the body if just saved, otherwise fall back to what's
       // stored. This prevents a race where the Airtable read returns a stale value.
       const outcome = body.outcome !== undefined ? (body.outcome ?? null) : ((po.get("Outcome") as string | null) ?? null);
-      const stage = body.lifecycleOverride ?? computeLifecycle(status, outcome);
+      const plannedStartDate = body.plannedStartDate !== undefined
+        ? (body.plannedStartDate ?? null)
+        : ((po.get("Planned Start Date") as string | null) ?? null);
+      const stage = body.lifecycleOverride ?? computeLifecycle(status, outcome, plannedStartDate);
       if (stage) {
         studentsPushed = await pushStudentLifecycle(id, stage);
         if (studentsPushed > 0) lifecyclePushed = stage;
@@ -177,21 +180,26 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       });
     } else if (NO_SHOW_STATUSES.has(status)) {
       // No-show / cancelled — queue a reschedule outreach via the standard outbox.
-      // enqueueOutboxJob now throws on Airtable errors (not swallowed), so the outer
-      // catch will return a 500 with the real error message if something goes wrong.
+      // IMPORTANT: use the SAME job type + dedupe key as the automatic detectors
+      // (kumon-po-no-show-detector → `noshow:<po>`, family-cancelled → `cancelled:<po>`)
+      // so this manual "send now" button collapses with whatever the detector
+      // already queued instead of producing a second, duplicate reschedule email.
+      const isCancelled = status === "Family Cancelled";
+      const jobType = isCancelled ? "Family-Cancelled Winback" : "No-Show Reschedule";
+      const dedupeKey = isCancelled ? `cancelled:${id}` : `noshow:${id}`;
       const studentName = (po.get("Student Display") as string | null) ?? "(student)";
       queuedId = await enqueueOutboxJob({
-        jobType: "Post-PO Follow-up",
-        job: `Post-PO Follow-up — ${studentName} (${status}, manual)`,
+        jobType,
+        job: `${jobType} — ${studentName} (manual)`,
         triggerSource: "admin-po-recap-manual-followup",
-        dedupeKey: `po-followup:${id}`,
+        dedupeKey,
         contextNotes: JSON.stringify({
           studentName,
           grade: (po.get("Grade") as string | null) ?? null,
           status,
           subjects: ((po.get("Subject Interest") as string[] | undefined) ?? []),
           staffNotes: (po.get("Staff Notes ") as string | null) ?? null,
-          _workerHint: `The family ${status === "Family Cancelled" ? "cancelled" : "did not show up for"} their PO. Write a warm, non-pushy note offering to reschedule.`,
+          _workerHint: `The family ${isCancelled ? "cancelled" : "did not show up for"} their PO. Write a warm, non-pushy note offering to reschedule.`,
         }, null, 2),
         studentIds,
         poId: id,

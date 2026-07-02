@@ -402,37 +402,46 @@ export default function POAdminPage() {
                   disabled={isPending}
                   onClick={() => quickArchive(po, "Enrolled")}
                   className="btn inline-flex items-center gap-1 text-[12px]"
-                  title="Signed up, hasn't started yet. Lifecycle → Pending Start."
+                  title="Enrolled with a future start date set — use when you've locked in a specific first day. Lifecycle → Pending Start."
                 >
                   <CheckCircle className="w-3 h-3" />
-                  Pending Start
+                  Enrolled — start date set
                 </button>
                 <button
                   disabled={isPending}
                   onClick={() => quickArchive(po, "Enrolled", "Active-Engaged")}
                   className="btn btn-primary inline-flex items-center gap-1 text-[12px]"
-                  title="Enrolled AND already attending. Lifecycle → Active-Engaged."
+                  title="Enrolled AND already had their first class. Lifecycle → Active-Engaged."
                 >
                   <CheckCircle className="w-3 h-3" />
-                  Active
+                  Enrolled — active now
+                </button>
+                <button
+                  disabled={isPending}
+                  onClick={() => quickArchive(po, "Plan to Enroll")}
+                  className="btn inline-flex items-center gap-1 text-[12px]"
+                  title="Said yes but no start date set yet — system will send enrollment steps and follow up until date is locked in. Lifecycle → PO Attended – Plan to Enroll."
+                >
+                  <CheckCircle className="w-3 h-3" />
+                  Plan to Enroll
                 </button>
                 <button
                   disabled={isPending}
                   onClick={() => quickArchive(po, "Undecided")}
                   className="btn inline-flex items-center gap-1 text-[12px]"
-                  title="Not enrolling now but may return — stays in re-engagement pool for win-back outreach"
+                  title="Interested but not ready to commit — system sends low-pressure follow-ups. Lifecycle → PO Attended – Undecided."
                 >
                   <Clock className="w-3 h-3" />
-                  Not now
+                  Undecided
                 </button>
                 <button
                   disabled={isPending}
                   onClick={() => quickArchive(po, "Not Interested")}
                   className="btn inline-flex items-center gap-1 text-[12px] text-ink-tertiary"
-                  title="Definite no — excluded from future campaigns"
+                  title="Definite no — excluded from all future outreach campaigns."
                 >
                   <XCircle className="w-3 h-3" />
-                  No interest
+                  Not Interested
                 </button>
                 <button
                   disabled={isPending || emailSent}
@@ -678,24 +687,28 @@ export default function POAdminPage() {
             <p className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-2">Attended PO — action buttons</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2">
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">✓ Pending Start</span>
-                <span className="text-ink-secondary leading-snug">Signed up but hasn&apos;t started classes yet — use when there&apos;s a future start date. Lifecycle → <em>Pending Start</em>.</span>
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line whitespace-nowrap">✓ Enrolled — start date set</span>
+                <span className="text-ink-secondary leading-snug">Enrolled with a specific first day locked in. Lifecycle → <em>Pending Start</em>.</span>
               </div>
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-status-success-bg text-status-success-fg">✓ Active</span>
-                <span className="text-ink-secondary leading-snug">Enrolled <strong>and already attending</strong> — use when the student has had their first class. Lifecycle → <em>Active-Engaged</em>.</span>
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-status-success-bg text-status-success-fg whitespace-nowrap">✓ Enrolled — active now</span>
+                <span className="text-ink-secondary leading-snug">Enrolled <strong>and already attending</strong> — use when the student has already had their first class. Lifecycle → <em>Active-Engaged</em>.</span>
               </div>
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">Not now</span>
-                <span className="text-ink-secondary leading-snug">Not enrolling today but may come back. Keeps them in the win-back re-engagement pool.</span>
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line whitespace-nowrap">✓ Plan to Enroll</span>
+                <span className="text-ink-secondary leading-snug">Said yes but no start date yet. System sends enrollment steps and follows up until date is locked in. Lifecycle → <em>PO Attended – Plan to Enroll</em>.</span>
               </div>
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-tertiary border border-line">No interest</span>
-                <span className="text-ink-secondary leading-snug">Definite no. Archives and flags as <em>Not Interested</em> — excluded from future campaigns.</span>
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">Undecided</span>
+                <span className="text-ink-secondary leading-snug">Interested but not ready to commit. System sends low-pressure follow-ups over the next 30 days.</span>
               </div>
               <div className="flex items-start gap-2.5">
-                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">✉ Send</span>
-                <span className="text-ink-secondary leading-snug">Queue a follow-up email. Does <strong>not</strong> archive — use when you&apos;re still in conversation.</span>
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-tertiary border border-line">Not Interested</span>
+                <span className="text-ink-secondary leading-snug">Definite no. Archives and flags as <em>Not Interested</em> — excluded from all future campaigns.</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">✉ Email</span>
+                <span className="text-ink-secondary leading-snug">Queue a follow-up email. Does <strong>not</strong> archive — use when you&apos;re still mid-conversation.</span>
               </div>
               <div className="flex items-start gap-2.5">
                 <span className="mt-0.5 shrink-0 px-2 py-0.5 rounded text-[11px] font-medium bg-surface text-ink-secondary border border-line">▣ Archive</span>

@@ -41,7 +41,11 @@ export function lifecycleBucket(lifecycle: string | null | undefined): Lifecycle
   if (!lifecycle) return "active";
   if (lifecycle === "Active-Engaged" || lifecycle === "Active-At-Risk") return "active";
   if (lifecycle === "PO Booked" || lifecycle === "Pending Start" || lifecycle === "Pending Start State") return "preStart";
-  if (lifecycle === "PO Attended - Did Not Enroll") return "didNotEnroll";
+  if (
+    lifecycle === "PO Attended - Did Not Enroll" ||
+    lifecycle === "PO Attended - Plan to Enroll" ||
+    lifecycle === "PO Attended - Undecided"
+  ) return "didNotEnroll";
   if (lifecycle === "PO No-Show" || lifecycle === "PO Cancelled") return "poMissed";
   if (lifecycle === "Recently Discontinued" || lifecycle === "Long Lapsed" || lifecycle === "Reactivation Target" || lifecycle === "Historical") return "winBack";
   return "active";
@@ -159,6 +163,8 @@ export const LIFECYCLE_STAGES = [
   "Pending Start State",
   "Active-Engaged",
   "Active-At-Risk",
+  "PO Attended - Plan to Enroll",
+  "PO Attended - Undecided",
   "PO Attended - Did Not Enroll",
   "PO No-Show",
   "PO Cancelled",

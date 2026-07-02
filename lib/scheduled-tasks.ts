@@ -62,11 +62,19 @@ export const SCHEDULED_TASKS: ScheduledTaskConfig[] = [
   },
   {
     taskId: "kumon-po-undecided-followup",
-    label: "PO Undecided follow-up drafts",
-    description: "Drafts thank-you / follow-up emails for Attended + Undecided POs.",
-    schedule: "Nightly · 11:02 PM ET",
-    enabled: true,
+    label: "PO Undecided follow-up drafts (retired)",
+    description: "DISABLED 2026-07-01 — superseded by the PO Cadence Engine's Undecided sequence.",
+    schedule: "Was: Nightly · 10:55 PM ET",
+    enabled: false,
     category: "drafts"
+  },
+  {
+    taskId: "kumon-po-cadence-engine",
+    label: "PO Cadence Engine",
+    description: "Daily: multi-touch follow-up for every warm PO stage (Plan-to-Enroll-no-date, Undecided, No-Show, Cancelled). Reads the Outreach Cadences table, enqueues the next due touch, stops on reply intent, graduates to Reactivation Target.",
+    schedule: "Daily · 8:20 AM ET",
+    enabled: true,
+    category: "po"
   },
   {
     taskId: "kumon-long-lapsed-daily",

@@ -31,18 +31,24 @@ interface EnqueueParams {
  * Pending / Drafting / Drafted — re-enqueue is silently skipped).
  */
 export async function enqueueOutboxJob(params: EnqueueParams): Promise<string | null> {
-  // Dedupe check — don't double-queue the same email
+  // Dedupe check — don't double-queue the same email. We treat a key as
+  // one-and-done: if a row with this key is Pending/Drafting/Drafted OR already
+  // Sent, skip. Including "Sent" prevents a re-enqueue after the first draft has
+  // gone out (e.g. re-approving a recap would otherwise queue a second identical
+  // email). Failed/Skipped rows are intentionally NOT matched, so a genuine retry
+  // can re-queue. Multi-touch cadences must therefore use a DISTINCT key per touch
+  // (e.g. `cadence:<po>:t2`), never the same key twice.
   const existing = await airtable()(OUTBOX_TABLE)
     .select({
       filterByFormula: `AND(
         {Dedupe Key} = '${params.dedupeKey.replace(/'/g, "\\'")}',
-        OR({Status} = 'Pending', {Status} = 'Drafting', {Status} = 'Drafted')
+        OR({Status} = 'Pending', {Status} = 'Drafting', {Status} = 'Drafted', {Status} = 'Sent')
       )`,
       fields: ["Dedupe Key"],
       maxRecords: 1
     })
     .firstPage();
-  if (existing.length > 0) return null; // already live, skip
+  if (existing.length > 0) return null; // already live or sent, skip
 
   const fields: Partial<FieldSet> = {
     Job: params.job,

@@ -75,11 +75,11 @@ export function suggestBranch(r: Recap): BranchSuggestion {
         reasoning: "Outcome is Plan to Enroll with a start date but no schedule yet."
       };
     }
-    if (o === "Plan to Enroll" && !hasStart) {
+    if ((o === "Plan to Enroll" || o === "Enrolled") && !hasStart) {
       return {
         branch: "welcome-need-enrollment",
         label: "Joining us — please complete enrollment + set start date",
-        reasoning: "Outcome is Plan to Enroll but start date isn't set yet."
+        reasoning: "Outcome is Plan to Enroll / Enrolled but start date isn't set yet."
       };
     }
   }

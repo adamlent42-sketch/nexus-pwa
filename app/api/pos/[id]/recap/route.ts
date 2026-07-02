@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     let lifecyclePushed: string | null = null;
     let studentsPushed = 0;
     if (autoFinalize) {
-      const stage = computeLifecycle(d.status, d.outcome ?? null);
+      const stage = computeLifecycle(d.status, d.outcome ?? null, d.plannedStartDate ?? null);
       if (stage) {
         const po = await airtable()(TABLE.POs).find(id);
         const studentIds = ((po.get("Students") as string[] | undefined) ?? []) as string[];
