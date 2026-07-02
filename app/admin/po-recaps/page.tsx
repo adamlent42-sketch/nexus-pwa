@@ -410,7 +410,7 @@ export default function POAdminPage() {
                 <button
                   disabled={isPending}
                   onClick={() => quickArchive(po, "Enrolled", "Active-Engaged")}
-                  className="btn btn-primary inline-flex items-center gap-1 text-[12px]"
+                  className="btn inline-flex items-center gap-1 text-[12px]"
                   title="Enrolled AND already had their first class. Lifecycle → Active-Engaged."
                 >
                   <CheckCircle className="w-3 h-3" />
