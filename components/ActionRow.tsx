@@ -1,6 +1,6 @@
 "use client";
 
-import { Bell, NotebookPen, Mail, Trophy, Car, CalendarOff, UserCog, CalendarPlus } from "lucide-react";
+import { Bell, NotebookPen, Mail, Trophy, Car, CalendarOff, UserCog, CalendarPlus, Phone } from "lucide-react";
 import { useForms } from "@/components/forms/FormsProvider";
 
 interface Action {
@@ -21,11 +21,12 @@ export function ActionRow() {
     { key: "pickup",      label: "Pickup notice",    icon: <Car className="w-[18px] h-[18px]" />,          iconColor: "text-tint-purple-sub", onClick: forms.openPickup },
     { key: "po",          label: "Book PO",          icon: <CalendarPlus className="w-[18px] h-[18px]" />, iconColor: "text-tint-pos-sub",    onClick: forms.openCreatePO },
     { key: "student",     label: "Update student",   icon: <UserCog className="w-[18px] h-[18px]" />,      iconColor: "text-tint-notes-sub",  onClick: () => forms.openStudentUpdate() },
-    { key: "timeoff",     label: "Time off",         icon: <CalendarOff className="w-[18px] h-[18px]" />,  iconColor: "text-ink-secondary",   onClick: forms.openTimeOff }
+    { key: "timeoff",     label: "Time off",         icon: <CalendarOff className="w-[18px] h-[18px]" />,  iconColor: "text-ink-secondary",   onClick: forms.openTimeOff },
+    { key: "logconv",     label: "Log conversation", icon: <Phone className="w-[18px] h-[18px]" />,         iconColor: "text-tint-notes-sub",  onClick: forms.openLogConversation }
   ];
 
   return (
-    <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 mb-4">
+    <div className="grid grid-cols-3 sm:grid-cols-9 gap-2 mb-4">
       {ACTIONS.map((a) => (
         <button
           key={a.key}
