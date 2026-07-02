@@ -137,7 +137,7 @@ export function LogConversationModal({ open, onClose }: Props) {
           </div>
         ) : (
           <div className="relative">
-            {/* Plain <input> so we can use autoFocus without forwardRef */}
+            {/* Plain input so we can use autoFocus without forwardRef */}
             <input
               autoFocus
               type="text"
@@ -149,7 +149,7 @@ export function LogConversationModal({ open, onClose }: Props) {
             {(results.length > 0 || searching) && (
               <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface border border-line rounded shadow-lg max-h-52 overflow-y-auto">
                 {searching && (
-                  <p className="px-3 py-2 text-[12px] text-ink-tertiary">Searching…</p>
+                  <p className="px-3 py-2 text-[12px] text-ink-tertiary">Searching...</p>
                 )}
                 {results.map((r) => (
                   <button
@@ -176,8 +176,8 @@ export function LogConversationModal({ open, onClose }: Props) {
       <Field label="Type" required>
         <ChipGroup value={type} onChange={setType} options={["Phone Call", "In Person"]} />
         <div className="mt-2 grid grid-cols-2 gap-x-4 text-[11px] text-ink-tertiary border-t border-line pt-2">
-          <div><span className="font-medium text-ink-secondary">Phone Call</span> — spoke by phone</div>
-          <div><span className="font-medium text-ink-secondary">In Person</span> — face-to-face at the center</div>
+          <div><span className="font-medium text-ink-secondary">Phone Call</span> -- spoke by phone</div>
+          <div><span className="font-medium text-ink-secondary">In Person</span> -- face-to-face at the center</div>
         </div>
       </Field>
 
@@ -187,7 +187,7 @@ export function LogConversationModal({ open, onClose }: Props) {
       </Field>
 
       {/* Notes */}
-      <Field label="Notes" hint="what happened — feeds into future email drafts">
+      <Field label="Notes" hint="what happened -- feeds into future email drafts">
         <TextArea
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -198,7 +198,7 @@ export function LogConversationModal({ open, onClose }: Props) {
 
       <p className="text-[11px] text-ink-tertiary">
         Logs a Communications record, updates Last Contact Date immediately, and
-        appends to the family&apos;s context so future email drafts can reference the conversation.
+        appends to the family context so future email drafts can reference the conversation.
       </p>
     </Modal>
   );
