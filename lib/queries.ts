@@ -13,7 +13,13 @@ import type {
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
-  const body = (await res.json()) as ApiResponse<T>;
+  const text = await res.text();
+  let body: ApiResponse<T>;
+  try {
+    body = JSON.parse(text) as ApiResponse<T>;
+  } catch {
+    throw new Error(`Server error (status ${res.status}) — try refreshing`);
+  }
   if (!body.ok) throw new Error(body.error || `Request failed: ${url}`);
   return body.data;
 }
