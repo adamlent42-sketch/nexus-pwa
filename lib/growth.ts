@@ -19,6 +19,8 @@ export const TUITION_PER_ENROLLMENT = 165;
 export const DUAL_DISCOUNT = 10;
 
 const ACTIVE_LIFECYCLES = new Set(["Active-Engaged", "Active-At-Risk"]);
+const PENDING_START_LIFECYCLES = new Set(["Pending Start", "Pending Start State"]);
+const BREAK_LIFECYCLES = new Set(["Planned Break"]);
 const REAL_SUBJECTS = new Set(["Math", "Reading"]);
 
 function enrollmentsFromSubjects(subjects: string[]): number {
@@ -51,6 +53,12 @@ export interface GrowthResult {
   mrr: number;                  // modeled: enrollments * tuition - dual discount
   targetMrr: number;            // modeled MRR at 225 (same dual ratio)
   billedMonthly: number | null; // actual monthly recurring billings from Invoice Ninja (null if unavailable)
+  // Confirmed upcoming starts (Pending Start lifecycle with a Planned Start Date set)
+  pendingStartStudents: number;
+  pendingStartEnrollments: number; // subject-enrollment count for pending starts
+  // Students on a planned break (drag on enrollment count)
+  onBreakStudents: number;
+  onBreakEnrollments: number;
   // Net flow this calendar month, measured in enrollments.
   startedEnrollments: number;
   discontinuedEnrollments: number;
@@ -63,6 +71,7 @@ export interface GrowthResult {
   funnel: FunnelStage[];        // this month's HELD POs (conversion cohort)
   funnelLeak: string | null;    // human-readable biggest-leak note
   upcomingPos: number;          // POs dated later this month, not yet held
+  noShowPos: number;            // No-show POs in trailing 90 days — re-engagement lead pool
   channels: ChannelRow[];       // trailing 90 days, by booking source
   generatedAt: string;
 }
@@ -80,7 +89,7 @@ export async function computeGrowth(): Promise<GrowthResult> {
 
   const [studentRecs, poRecs, billedMonthly] = await Promise.all([
     airtable()(TABLE.Students)
-      .select({ fields: ["Lifecycle Stage", "Subjects", "Enroll Date", "End Date"] })
+      .select({ fields: ["Lifecycle Stage", "Subjects", "Enroll Date", "End Date", "Planned Start Date"] })
       .all(),
     airtable()(TABLE.POs)
       .select({ fields: ["PO Date", "Status", "Outcome", "Booking Source"] })
@@ -92,6 +101,10 @@ export async function computeGrowth(): Promise<GrowthResult> {
   let enrollments = 0;
   let studentCount = 0;
   let dualCount = 0;
+  let pendingStartStudents = 0;
+  let pendingStartEnrollments = 0;
+  let onBreakStudents = 0;
+  let onBreakEnrollments = 0;
   let startedEnrollments = 0;
   let startedStudents = 0;
   let discontinuedEnrollments = 0;
@@ -106,6 +119,21 @@ export async function computeGrowth(): Promise<GrowthResult> {
       studentCount += 1;
       enrollments += subjEnroll;
       if (subjects.includes("Math") && subjects.includes("Reading")) dualCount += 1;
+    }
+
+    // Confirmed upcoming starts — Pending Start with a Planned Start Date locked in.
+    if (PENDING_START_LIFECYCLES.has(lifecycle)) {
+      const plannedStartDate = (r.get("Planned Start Date") as string | null) ?? null;
+      if (plannedStartDate) {
+        pendingStartStudents += 1;
+        pendingStartEnrollments += subjEnroll > 0 ? subjEnroll : 1;
+      }
+    }
+
+    // Students currently on a planned break — they're paused, not growing.
+    if (BREAK_LIFECYCLES.has(lifecycle)) {
+      onBreakStudents += 1;
+      onBreakEnrollments += subjEnroll > 0 ? subjEnroll : 1;
     }
 
     const enrollDate = (r.get("Enroll Date") as string | null) ?? null;
@@ -168,6 +196,15 @@ export async function computeGrowth(): Promise<GrowthResult> {
     }
   }
 
+  // --- No-show lead pool (trailing 90 days) ---
+  // POs that occurred (date <= today) but were not attended — these families showed
+  // enough interest to book and are the warmest re-engagement targets.
+  const noShowPos = poRecs.filter((r) => {
+    const d = (r.get("PO Date") as string | null) ?? "";
+    const status = (r.get("Status") as string | null) ?? "";
+    return d >= ninetyDaysAgo && d <= today && status === "No Show";
+  }).length;
+
   // --- Channels (trailing 90 days, by booking source) ---
   const recentPos = poRecs.filter((r) => {
     const d = (r.get("PO Date") as string | null) ?? "";
@@ -195,6 +232,10 @@ export async function computeGrowth(): Promise<GrowthResult> {
     mrr,
     targetMrr,
     billedMonthly,
+    pendingStartStudents,
+    pendingStartEnrollments,
+    onBreakStudents,
+    onBreakEnrollments,
     startedEnrollments,
     discontinuedEnrollments,
     netEnrollments,
@@ -205,6 +246,7 @@ export async function computeGrowth(): Promise<GrowthResult> {
     funnel,
     funnelLeak,
     upcomingPos,
+    noShowPos,
     channels,
     generatedAt: new Date().toISOString()
   };
