@@ -130,7 +130,7 @@ export default function OutreachCommandCenter() {
           <div>
             <p className="text-[16px] font-medium leading-tight">Outreach command center</p>
             <p className="text-[12px] text-ink-secondary mt-0.5">
-              Everyone who needs communication — retention, pipeline, recovery, reactivation — in one prioritized list. Drive each lane toward 100% on-cadence.
+              Everyone who needs communication &mdash; retention, pipeline, recovery, reactivation &mdash; in one prioritized list. Drive each lane toward 100% on-cadence.
             </p>
           </div>
         </div>
@@ -144,7 +144,7 @@ export default function OutreachCommandCenter() {
         <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-ink-tertiary" />
         <span>
           <span className="font-medium text-ink">How drafts work:</span>{" "}
-          Click <span className="font-medium text-ink">Draft email</span> → row turns grey (&ldquo;Draft queued&rdquo;) → draft appears in Gmail at{" "}
+          Click <span className="font-medium text-ink">Draft email</span> &rarr; row turns grey (&ldquo;Draft queued&rdquo;) &rarr; draft appears in Gmail at{" "}
           <span className="font-medium text-ink">10:41 PM ET</span> nightly.{" "}
           Don&apos;t want to wait? Hit <span className="font-medium text-ink">Sync now</span> below to draft immediately.
         </span>
@@ -176,8 +176,8 @@ export default function OutreachCommandCenter() {
               </div>
               <div className="flex items-center gap-2 mt-2 text-[11px] text-ink-secondary">
                 <span>{l.total} total</span>
-                {l.overdue > 0 && <span className="text-status-danger-fg font-medium">· {l.overdue} overdue</span>}
-                {l.noContact > 0 && <span className="text-ink-tertiary">· {l.noContact} no contact</span>}
+                {l.overdue > 0 && <span className="text-status-danger-fg font-medium">&middot; {l.overdue} overdue</span>}
+                {l.noContact > 0 && <span className="text-ink-tertiary">&middot; {l.noContact} no contact</span>}
               </div>
             </button>
           );
@@ -224,7 +224,7 @@ export default function OutreachCommandCenter() {
       </div>
 
       {rows.length === 0 ? (
-        <EmptyState icon={<CheckCircle2 className="w-5 h-5 text-status-success-fg" />} message={showOnTrack ? "No students match." : "Nobody's overdue — every lane is on cadence. 🎉"} />
+        <EmptyState icon={<CheckCircle2 className="w-5 h-5 text-status-success-fg" />} message={showOnTrack ? "No students match." : "Nobody’s overdue — every lane is on cadence. 🎉"} />
       ) : (
         <div className="space-y-2">
           {rows.map((s) => (
@@ -343,11 +343,11 @@ function SyncNowBar() {
         <div className="min-w-0">
           <p className="text-[14px] font-medium">Sync now</p>
           <p className="text-[12px] text-ink-secondary mt-0.5">
-            Drafts queued emails, scans Sent mail for ones you already sent, and refreshes each student&apos;s last-contact so they clear from these lists — without waiting for the overnight run.
+            Drafts queued emails, scans Sent mail for ones you already sent, and refreshes each student&apos;s last-contact so they clear from these lists &mdash; without waiting for the overnight run.
           </p>
           <div className="mt-2 text-[12px]">
             {statusQ.isPending ? (
-              <span className="text-ink-tertiary">Checking sync status…</span>
+              <span className="text-ink-tertiary">Checking sync status&hellip;</span>
             ) : running ? (
               <span className="inline-flex items-center gap-1.5 text-status-warn-fg">
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -358,7 +358,7 @@ function SyncNowBar() {
                 <CheckCircle2 className="w-3.5 h-3.5 mt-0.5 shrink-0" />
                 <span className="text-ink-secondary">
                   Last sync {relativeTime(cur.completedAt ?? cur.requestedAt)}
-                  {cur.resultSummary ? <> · <span className="text-ink-tertiary">{cur.resultSummary}</span></> : null}
+                  {cur.resultSummary ? <> &middot; <span className="text-ink-tertiary">{cur.resultSummary}</span></> : null}
                 </span>
               </span>
             ) : cur?.status === "Error" ? (
@@ -437,4 +437,19 @@ function LogConversationDialog({ student, onClose }: { student: OutreachStudent 
         </>
       }
     >
-      <p className="text-[13px] text-ink-se
+      <p className="text-[13px] text-ink-secondary mb-4">
+        Records a Communications row for this student so the outreach clock resets. No email is sent.
+      </p>
+      <Field label="Type" required>
+        <ChipGroup value={type} onChange={setType} options={["In Person", "Phone Call"]} />
+      </Field>
+      <Field label="Date" required hint="defaults to today; can't be in the future">
+        <TextInput type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
+      </Field>
+      <Field label="Notes" hint="optional -- what you talked about, takeaways">
+        <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} />
+      </Field>
+      {error && <p className="text-[12px] text-status-danger-fg mt-1 mb-2">{error}</p>}
+    </Modal>
+  );
+}
