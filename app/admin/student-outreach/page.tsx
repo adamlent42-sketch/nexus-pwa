@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  Mail, MessageSquare, UserCog, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Megaphone
+  Mail, MessageSquare, UserCog, RefreshCw, Loader2, CheckCircle2, AlertTriangle, Megaphone, Info
 } from "lucide-react";
 import { adminFetch } from "@/lib/admin-fetch";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -138,6 +138,19 @@ export default function OutreachCommandCenter() {
           <RefreshCw className={`w-3.5 h-3.5 ${q.isFetching ? "animate-spin" : ""}`} /> {q.isFetching ? "Refreshing…" : "Refresh"}
         </button>
       </div>
+
+      {/* How it works */}
+      <div className="flex items-start gap-2.5 rounded-lg border border-line bg-surface-subtle px-3.5 py-3 text-[12px] text-ink-secondary">
+        <Info className="w-3.5 h-3.5 mt-0.5 shrink-0 text-ink-tertiary" />
+        <span>
+          <span className="font-medium text-ink">How drafts work:</span>{" "}
+          Click <span className="font-medium text-ink">Draft email</span> → row turns grey (&ldquo;Draft queued&rdquo;) → draft appears in Gmail at{" "}
+          <span className="font-medium text-ink">10:41 PM ET</span> nightly.{" "}
+          Don&apos;t want to wait? Hit <span className="font-medium text-ink">Sync now</span> below to draft immediately.
+        </span>
+      </div>
+
+      <SyncNowBar />
 
       {/* Scoreboard */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -424,19 +437,4 @@ function LogConversationDialog({ student, onClose }: { student: OutreachStudent 
         </>
       }
     >
-      <p className="text-[13px] text-ink-secondary mb-4">
-        Records a Communications row for this student so the outreach clock resets. No email is sent.
-      </p>
-      <Field label="Type" required>
-        <ChipGroup value={type} onChange={setType} options={["In Person", "Phone Call"]} />
-      </Field>
-      <Field label="Date" required hint="defaults to today; can't be in the future">
-        <TextInput type="date" value={date} max={today} onChange={(e) => setDate(e.target.value)} />
-      </Field>
-      <Field label="Notes" hint="optional — what you talked about, takeaways">
-        <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} />
-      </Field>
-      {error && <p className="text-[12px] text-status-danger-fg mt-1 mb-2">{error}</p>}
-    </Modal>
-  );
-}
+      <p className="text-[13px] text-ink-se
