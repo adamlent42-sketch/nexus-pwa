@@ -164,7 +164,13 @@ export async function computeGrowth(): Promise<GrowthResult> {
   // Conversion is measured ONLY on POs that have actually occurred (date on or
   // before today). A future-dated PO hasn't happened yet, so counting it as
   // "not attended" would fake a no-show leak. Upcoming POs are reported separately.
-  const monthPos = poRecs.filter((r) => ((r.get("PO Date") as string | null) ?? "").slice(0, 7) === monthPrefix);
+  // Exclude cancelled POs from all funnel metrics — a cancel+rebook is one PO, not two.
+  const CANCELLED_STATUSES = new Set(["Family Cancelled", "Instructor Cancelled"]);
+  const monthPos = poRecs.filter((r) => {
+    const d = (r.get("PO Date") as string | null) ?? "";
+    const status = (r.get("Status") as string | null) ?? "";
+    return d.slice(0, 7) === monthPrefix && !CANCELLED_STATUSES.has(status);
+  });
   const duePos = monthPos.filter((r) => ((r.get("PO Date") as string | null) ?? "") <= today);
   const upcomingPos = monthPos.length - duePos.length;
 

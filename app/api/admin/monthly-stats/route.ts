@@ -47,14 +47,19 @@ export async function GET(req: NextRequest) {
       buckets.set(prefix, { posScheduled: 0, posAttended: 0, planEnroll: 0, enrollments: 0 });
     }
 
-    // Tally POs
+    // Tally POs — exclude cancellations so a book→cancel→rebook only counts once.
+    // "Family Cancelled" and "Instructor Cancelled" are noise; the rebooking is
+    // the real signal.
+    const CANCELLED_STATUSES = new Set(["Family Cancelled", "Instructor Cancelled"]);
     for (const r of poRecs) {
       const date = (r.get("PO Date") as string | null) ?? "";
       const prefix = date.slice(0, 7);
       const b = buckets.get(prefix);
       if (!b) continue;
+      const status = (r.get("Status") as string | null) ?? "";
+      if (CANCELLED_STATUSES.has(status)) continue;  // don't count cancelled POs
       b.posScheduled++;
-      if ((r.get("Status") as string | null) === "Attended") b.posAttended++;
+      if (status === "Attended") b.posAttended++;
       const outcome = (r.get("Outcome") as string | null) ?? "";
       if (outcome === "Plan to Enroll" || outcome === "Enrolled") b.planEnroll++;
     }
