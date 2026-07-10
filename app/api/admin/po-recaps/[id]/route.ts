@@ -128,6 +128,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }).catch((emailErr) => {
         console.error("[po-recap approve] email enqueue failed (approve already saved):", emailErr);
       });
+
+      // For no-shows: enqueue a No-Show Reschedule job when Adam approves the recap
+      // manually. The auto detector (kumon-po-no-show-detector) handles the HQ-email
+      // path; this covers the case where Adam does the recap himself before the
+      // detector fires. Uses the same dedupe key so they collapse if both trigger.
+      if (status === "Not Attended" || status === "No-Show") {
+        const noShowStudentName = (po.get("Student Display") as string | null) ?? "(student)";
+        enqueueOutboxJob({
+          jobType: "No-Show Reschedule",
+          job: `No-Show Reschedule — ${noShowStudentName} (recap)`,
+          triggerSource: "admin-po-recap-approve",
+          dedupeKey: `noshow:${id}`,
+          contextNotes: JSON.stringify({
+            studentName: noShowStudentName,
+            grade: (po.get("Grade") as string | null) ?? null,
+            status,
+            subjects: ((po.get("Subject Interest") as string[] | undefined) ?? []),
+            staffNotes: (po.get("Staff Notes ") as string | null) ?? null,
+            _workerHint: `The family did not show up for their Parent Orientation. Write a warm, non-pushy note offering to reschedule.`,
+          }, null, 2),
+          studentIds: approveStudentIds,
+          poId: id,
+        }).catch((noShowErr) => {
+          console.error("[po-recap approve] no-show reschedule enqueue failed:", noShowErr);
+        });
+      }
     }
 
     return NextResponse.json({
@@ -153,7 +179,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const status = (po.get("Status") as string | null) ?? "";
     const outcome = (po.get("Outcome") as string | null) ?? null;
 
-    const NO_SHOW_STATUSES = new Set(["No-Show", "Family Cancelled", "Instructor Cancelled"]);
+    const NO_SHOW_STATUSES = new Set(["No-Show", "Not Attended", "Family Cancelled", "Instructor Cancelled"]);
 
     let queuedId: string | null = null;
 
