@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCog } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { Field, TextInput, TextArea } from "@/components/ui/Field";
+import { Field, TextInput, TextArea, Select } from "@/components/ui/Field";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { StudentSelect } from "@/components/ui/StudentSelect";
 import { StaffNameSelect } from "@/components/ui/StaffNameSelect";
@@ -15,7 +15,8 @@ import { todayInET } from "@/lib/time";
 interface Student { id: string; name: string; grade: string | null; status: string | null }
 interface Props { open: boolean; onClose: () => void; presetStudent?: Student | null }
 
-interface DetailsState {
+interface PO { id: string; poDate: string | null; status: string | null; outcome: string | null; plannedStartDate: string | null }
+interface FormState {
   subjects: string[];
   mathLevel: string;
   readingLevel: string;
@@ -25,95 +26,41 @@ interface DetailsState {
   dob: string;
   enrollDate: string;
   firstClassDate: string;
+  firstClassAttended: string;
   endDate: string;
   lifecycleStage: string | null;
+  eEnrollmentCompleted: boolean;
+  schedule: string[];
+  workPickupDay: string | null;
+  holdStart: string;
+  plannedReturn: string;
+  breakCheckin: string;
+  holdNotes: string;
+  invoiceAction: string | null;
+  po: PO | null;
 }
 
-const KINDS = [
-  "Edit details",
-  "Schedule",
-  "Pickup Day",
-  "Pause / Break",
-  "Stop Enrollment",
-  "Restart Enrollment",
-  "Other"
-] as const;
-type ChangeKind = typeof KINDS[number];
-
-const HELP: Record<ChangeKind, string> = {
-  "Edit details": "Directly edit this student's record — subjects, levels, grade, school, key dates (incl. End Date), and lifecycle. Saves immediately.",
-  "Schedule": "Days of week this student attends. Applies right away. KSIS also needs to be updated.",
-  "Pickup Day": "Day this student picks up their week's work. Applies right away — KSIS needs syncing too.",
-  "Pause / Break": "Family is taking a temp break. Set the dates below so Adam can close the invoice and the return reminder fires automatically.",
-  "Stop Enrollment": "Family is discontinuing. Student moves to Recently Discontinued immediately. Adam closes KSIS and sends the final invoice.",
-  "Restart Enrollment": "Family is starting back up. Student moves to Active-Engaged immediately. Adam reopens KSIS and resumes billing.",
-  "Other": "Anything else worth flagging — describe it below. Logs a request for Adam to review."
-};
-
-// Maps chip label → the change request type stored in Airtable.
-const REQUEST_TYPE: Record<ChangeKind, string> = {
-  "Edit details":       "Edit Details",
-  "Schedule":           "Schedule Change",
-  "Pickup Day":         "Pickup Day Change",
-  "Pause / Break":      "Pause / Break",
-  "Stop Enrollment":    "Stop Enrollment",
-  "Restart Enrollment": "Restart Enrollment",
-  "Other":              "Other"
-};
-
-const needsEffectiveDateFor = new Set<ChangeKind>(["Pause / Break", "Stop Enrollment", "Restart Enrollment"]);
+const PO_STATUS = ["Scheduled", "Rescheduled", "Attended", "Not Attended", "Family Cancelled", "Instructor Cancelled"];
+const PO_OUTCOME = ["Plan to Enroll", "Enrolled", "Undecided", "Not Interested"];
 
 export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
   const [student, setStudent] = useState<Student | null>(presetStudent ?? null);
-  const [kind, setKind] = useState<ChangeKind | null>(null);
-  const [schedule, setSchedule] = useState<string[]>([]);
-  const [pickupDay, setPickupDay] = useState<string | null>(null);
-  const [effectiveDate, setEffectiveDate] = useState<string>(todayInET());
-  const [reason, setReason] = useState("");
-  const [ksisDone, setKsisDone] = useState(false);
+  const [form, setForm] = useState<FormState | null>(null);
   const [submittedBy, setSubmittedBy] = useState("");
-  const [details, setDetails] = useState<DetailsState | null>(null);
-  // Break-specific dates
-  const [breakStart, setBreakStart] = useState("");
-  const [expectedReturn, setExpectedReturn] = useState("");
-  const [followUpDate, setFollowUpDate] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const toast = useToast();
   const qc = useQueryClient();
 
-  const current = useQuery({
-    queryKey: ["student-schedule", student?.id],
-    enabled: !!student,
-    queryFn: async () => {
-      const r = await fetch(`/api/students/${student!.id}/schedule`);
-      const body = await r.json();
-      if (!body.ok) throw new Error(body.error);
-      return body.data as { schedule: string[]; workPickupDay: string | null };
-    },
-    staleTime: 0
-  });
-
-  useEffect(() => {
-    if (current.data) {
-      setSchedule(current.data.schedule);
-      setPickupDay(current.data.workPickupDay);
-    }
-  }, [current.data]);
-
   const profileQuery = useQuery({
     queryKey: ["student-profile-edit", student?.id],
-    enabled: !!student && kind === "Edit details",
+    enabled: !!student,
     queryFn: async () => {
       const r = await fetch(`/api/students/${student!.id}/profile`);
       const body = await r.json();
       if (!body.ok) throw new Error(body.error);
-      return body.data as {
-        subjects?: string[]; mathLevel?: string | null; readingLevel?: string | null;
-        grade?: string | null; school?: string | null; paperConnect?: string | null;
-        dob?: string | null; enrollDate?: string | null; firstClassDate?: string | null;
-        endDate?: string | null; lifecycleStage?: string | null;
-      };
+      return body.data as FormState & { po: PO | null };
     },
     staleTime: 0
   });
@@ -121,7 +68,7 @@ export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
   useEffect(() => {
     if (profileQuery.data) {
       const p = profileQuery.data;
-      setDetails({
+      setForm({
         subjects: p.subjects ?? [],
         mathLevel: p.mathLevel ?? "",
         readingLevel: p.readingLevel ?? "",
@@ -131,8 +78,18 @@ export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
         dob: p.dob ?? "",
         enrollDate: p.enrollDate ?? "",
         firstClassDate: p.firstClassDate ?? "",
+        firstClassAttended: p.firstClassAttended ?? "",
         endDate: p.endDate ?? "",
-        lifecycleStage: p.lifecycleStage ?? null
+        lifecycleStage: p.lifecycleStage ?? null,
+        eEnrollmentCompleted: p.eEnrollmentCompleted ?? false,
+        schedule: p.schedule ?? [],
+        workPickupDay: p.workPickupDay ?? null,
+        holdStart: p.holdStart ?? "",
+        plannedReturn: p.plannedReturn ?? "",
+        breakCheckin: p.breakCheckin ?? "",
+        holdNotes: p.holdNotes ?? "",
+        invoiceAction: p.invoiceAction ?? null,
+        po: p.po ?? null
       });
     }
   }, [profileQuery.data]);
@@ -142,31 +99,16 @@ export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
       setStudent(presetStudent ?? null);
     } else {
       setStudent(null);
-      setKind(null);
-      setSchedule([]);
-      setPickupDay(null);
-      setEffectiveDate(todayInET());
-      setReason("");
-      setKsisDone(false);
+      setForm(null);
       setSubmittedBy("");
-      setDetails(null);
-      setBreakStart("");
-      setExpectedReturn("");
-      setFollowUpDate("");
+      setReason("");
       setError(null);
     }
   }, [open, presetStudent]);
 
-  useEffect(() => {
-    setKsisDone(false);
-    setDetails(null);
-    setBreakStart("");
-    setExpectedReturn("");
-    setFollowUpDate("");
-  }, [kind]);
-
-  const profileMutation = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => {
+  const saveMutation = useMutation({
+    mutationFn: async ({ body, type }: { body: Record<string, unknown>; type: string }) => {
+      // 1. Save student record
       const r = await fetch(`/api/students/${student!.id}/profile`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -174,105 +116,120 @@ export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
       });
       const json = await r.json();
       if (!json.ok) throw new Error(json.error);
-      return json.data;
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["instruction-notes"] });
-      qc.invalidateQueries({ queryKey: ["students-search"] });
-      qc.invalidateQueries({ queryKey: ["admin", "student-outreach"] });
-      qc.invalidateQueries({ queryKey: ["admin", "outreach"] });
-      qc.invalidateQueries({ queryKey: ["student-schedule"] });
-      qc.invalidateQueries({ queryKey: ["student-profile-edit"] });
-    }
-  });
 
-  const requestMutation = useMutation({
-    mutationFn: async (body: Record<string, unknown>) => {
-      const r = await fetch(`/api/student-change-requests`, {
+      // 2. Log change request for audit trail
+      const cr = await fetch(`/api/student-change-requests`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          studentId: student!.id,
+          studentName: student!.name,
+          type,
+          effectiveDate: todayInET(),
+          reason: reason.trim() || undefined,
+          submittedBy,
+          ksisCompletedByStaff: false
+        })
       });
-      const json = await r.json();
-      if (!json.ok) throw new Error(json.error);
-      return json.data;
+      const crJson = await cr.json();
+      if (!crJson.ok) throw new Error(crJson.error);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["admin", "change-requests"] });
+      qc.invalidateQueries({ queryKey: ["student-profile-edit"] });
+      qc.invalidateQueries({ queryKey: ["students-search"] });
+      qc.invalidateQueries({ queryKey: ["student-schedule"] });
       qc.invalidateQueries({ queryKey: ["admin", "student-outreach"] });
+      qc.invalidateQueries({ queryKey: ["admin", "change-requests"] });
+      qc.invalidateQueries({ queryKey: ["admin", "attention"] });
+      qc.invalidateQueries({ queryKey: ["admin", "breaks"] });
     }
   });
 
-  const showKsisCheckbox = kind === "Pickup Day";
-  const needsEffectiveDate = kind ? needsEffectiveDateFor.has(kind) : false;
+  const set = <K extends keyof FormState>(k: K, v: FormState[K]) =>
+    setForm((f) => (f ? { ...f, [k]: v } : f));
+  const setPo = <K extends keyof PO>(k: K, v: PO[K]) =>
+    setForm((f) => (f && f.po ? { ...f, po: { ...f.po, [k]: v } } : f));
 
-  const submit = async () => {
+  const validate = (): boolean => {
+    if (!student) { setError("Pick a student"); return false; }
+    if (!submittedBy) { setError("Pick who's submitting"); return false; }
     setError(null);
-    if (!student) { setError("Pick a student"); return; }
-    if (!kind) { setError("Pick what's changing"); return; }
-    if (!submittedBy) { setError("Pick who's submitting"); return; }
-    if (kind === "Other" && !reason.trim()) { setError("Describe what's changing"); return; }
-    if (needsEffectiveDate && !effectiveDate) { setError("Effective date is required"); return; }
-    if (kind === "Pause / Break" && !expectedReturn) { setError("Expected return date is required"); return; }
+    return true;
+  };
 
+  const handleSave = async () => {
+    if (!validate() || !form) return;
     try {
-      // 1. Apply Student record changes for direct-edit kinds.
-      if (kind === "Edit details") {
-        if (!details) { setError("Still loading the record…"); return; }
-        await profileMutation.mutateAsync({
-          subjects: details.subjects,
-          mathLevel: details.mathLevel.trim() || null,
-          readingLevel: details.readingLevel.trim() || null,
-          grade: details.grade,
-          school: details.school.trim() || null,
-          paperConnect: details.paperConnect,
-          dob: details.dob || null,
-          enrollDate: details.enrollDate || null,
-          firstClassDate: details.firstClassDate || null,
-          endDate: details.endDate || null,
-          lifecycleStage: details.lifecycleStage
-        });
-      } else if (kind === "Schedule") {
-        await profileMutation.mutateAsync({ schedule });
-      } else if (kind === "Pickup Day") {
-        await profileMutation.mutateAsync({ workPickupDay: pickupDay });
-      }
-
-      // 2. Log a change request for EVERY kind — builds the admin audit trail.
-      await requestMutation.mutateAsync({
-        studentId: student.id,
-        studentName: student.name,
-        type: REQUEST_TYPE[kind],
-        effectiveDate: needsEffectiveDate ? effectiveDate : todayInET(),
-        reason: reason.trim() || undefined,
-        submittedBy,
-        ksisCompletedByStaff: showKsisCheckbox ? ksisDone : false,
-        ...(kind === "Pause / Break" ? { breakStart: breakStart || undefined, expectedReturn, followUpDate: followUpDate || undefined } : {})
+      await saveMutation.mutateAsync({
+        body: {
+          subjects: form.subjects,
+          mathLevel: form.mathLevel.trim() || null,
+          readingLevel: form.readingLevel.trim() || null,
+          grade: form.grade,
+          school: form.school.trim() || null,
+          paperConnect: form.paperConnect,
+          dob: form.dob || null,
+          enrollDate: form.enrollDate || null,
+          firstClassDate: form.firstClassDate || null,
+          firstClassAttended: form.firstClassAttended || null,
+          endDate: form.endDate || null,
+          lifecycleStage: form.lifecycleStage,
+          eEnrollmentCompleted: form.eEnrollmentCompleted,
+          schedule: form.schedule,
+          workPickupDay: form.workPickupDay,
+          holdStart: form.holdStart || null,
+          plannedReturn: form.plannedReturn || null,
+          breakCheckin: form.breakCheckin || null,
+          holdNotes: form.holdNotes || null,
+          invoiceAction: form.invoiceAction,
+          ...(form.po ? {
+            po: {
+              id: form.po.id,
+              status: form.po.status ?? undefined,
+              outcome: form.po.outcome ?? undefined,
+              plannedStartDate: form.po.plannedStartDate || null
+            }
+          } : {})
+        },
+        type: "Edit Details"
       });
-
-      // 3. Toast.
-      const toastMessages: Record<ChangeKind, string> = {
-        "Edit details":       `${student.name}'s record updated.`,
-        "Schedule":           `${student.name}'s schedule updated.`,
-        "Pickup Day":         ksisDone ? `${student.name}'s pickup day updated. KSIS marked done.` : `${student.name}'s pickup day updated. Logged for KSIS sync.`,
-        "Pause / Break":      `${student.name} break logged. Adam will handle the invoice.`,
-        "Stop Enrollment":    `Stop Enrollment request logged.`,
-        "Restart Enrollment": `Restart Enrollment request logged.`,
-        "Other":              "Request logged for Adam to review."
-      };
-      toast.push(toastMessages[kind], "success");
+      toast.push(`${student!.name}'s record updated.`, "success");
       onClose();
     } catch (e) {
-      toast.push(e instanceof Error ? e.message : "Failed to submit", "error");
+      toast.push(e instanceof Error ? e.message : "Failed to save", "error");
     }
   };
 
-  const pending = profileMutation.isPending || requestMutation.isPending;
+  const handleBreakAction = async (action: "plan" | "return") => {
+    if (!validate() || !form) return;
+    if (action === "plan" && !form.plannedReturn) {
+      setError("Planned return date is required to plan a break");
+      return;
+    }
+    try {
+      await saveMutation.mutateAsync({
+        body: {
+          breakAction: action,
+          holdStart: form.holdStart || null,
+          plannedReturn: form.plannedReturn || null,
+          breakCheckin: form.breakCheckin || null,
+          holdNotes: form.holdNotes || null
+        },
+        type: action === "plan" ? "Pause / Break" : "Restart Enrollment"
+      });
+      toast.push(
+        action === "plan"
+          ? "Break planned — Adam will cancel the recurring invoice."
+          : "Marked returned — Adam will reactivate the invoice.",
+        "success"
+      );
+      onClose();
+    } catch (e) {
+      toast.push(e instanceof Error ? e.message : "Failed", "error");
+    }
+  };
 
-  const submitLabel = pending ? "Saving…"
-    : kind === "Edit details" ? "Save changes"
-    : kind === "Schedule" || kind === "Pickup Day" ? "Apply change"
-    : "Submit";
+  const pending = saveMutation.isPending;
 
   return (
     <Modal
@@ -285,156 +242,205 @@ export function StudentUpdateForm({ open, onClose, presetStudent }: Props) {
       footer={
         <>
           <button onClick={onClose} className="btn">Cancel</button>
-          <button onClick={submit} disabled={pending || !student || !kind} className="btn btn-primary">
-            {submitLabel}
+          <button onClick={handleSave} disabled={pending || !student || !form} className="btn btn-primary">
+            {pending ? "Saving…" : "Save changes"}
           </button>
         </>
       }
     >
       <Field label="Student" required>
-        <StudentSelect value={student} onChange={setStudent} autoFocus={!presetStudent} />
+        <StudentSelect
+          value={student}
+          onChange={(s) => { setStudent(s); setForm(null); }}
+          autoFocus={!presetStudent}
+        />
       </Field>
 
-      {student && (
-        <Field label="What's changing?" required>
-          <ChipGroup
-            value={kind}
-            onChange={(v) => setKind(v as ChangeKind | null)}
-            options={KINDS}
-          />
-        </Field>
+      {student && profileQuery.isPending && (
+        <p className="text-[12px] text-ink-tertiary mb-4">Loading current record…</p>
+      )}
+      {student && profileQuery.isError && (
+        <p className="text-[12px] text-status-danger-fg mb-4">{(profileQuery.error as Error).message}</p>
       )}
 
-      {kind && (
-        <div className="bg-tint-notes-bg text-tint-notes-fg rounded p-2.5 mb-4 text-[12px]">
-          {HELP[kind]}
-        </div>
-      )}
-
-      {/* Edit details fields */}
-      {kind === "Edit details" && student && (
-        (profileQuery.isPending || !details) ? (
-          <p className="text-[12px] text-ink-tertiary mb-4">Loading current record…</p>
-        ) : (
-          <div className="space-y-3 mb-2">
-            <Field label="Subjects">
-              <ChipGroup multi value={details.subjects} onChange={(v) => setDetails({ ...details, subjects: v })} options={SUBJECTS} />
+      {form && (
+        <div className="space-y-4 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Lifecycle stage">
+              <Select value={form.lifecycleStage ?? ""} onChange={(e) => set("lifecycleStage", e.target.value || null)}>
+                <option value="">—</option>
+                {LIFECYCLE_STAGES.map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Math level">
-                <TextInput value={details.mathLevel} onChange={(e) => setDetails({ ...details, mathLevel: e.target.value })} placeholder="e.g. D" />
-              </Field>
-              <Field label="Reading level">
-                <TextInput value={details.readingLevel} onChange={(e) => setDetails({ ...details, readingLevel: e.target.value })} placeholder="e.g. CII" />
-              </Field>
-            </div>
             <Field label="Grade">
-              <ChipGroup value={details.grade} onChange={(v) => setDetails({ ...details, grade: v })} options={GRADES} />
+              <Select value={form.grade ?? ""} onChange={(e) => set("grade", e.target.value || null)}>
+                <option value="">—</option>
+                {GRADES.map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
             </Field>
+          </div>
+
+          <Field label="Subjects">
+            <ChipGroup multi value={form.subjects} onChange={(v) => set("subjects", v)} options={SUBJECTS} />
+          </Field>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Math level" hint="e.g. 7A, 2A, BII">
+              <TextInput value={form.mathLevel} onChange={(e) => set("mathLevel", e.target.value)} placeholder="—" />
+            </Field>
+            <Field label="Reading level" hint="e.g. 7A, AI, CII">
+              <TextInput value={form.readingLevel} onChange={(e) => set("readingLevel", e.target.value)} placeholder="—" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="School">
-              <TextInput value={details.school} onChange={(e) => setDetails({ ...details, school: e.target.value })} />
+              <TextInput value={form.school} onChange={(e) => set("school", e.target.value)} placeholder="—" />
             </Field>
             <Field label="Format">
-              <ChipGroup value={details.paperConnect} onChange={(v) => setDetails({ ...details, paperConnect: v })} options={PAPER_CONNECT} />
+              <Select value={form.paperConnect ?? ""} onChange={(e) => set("paperConnect", e.target.value || null)}>
+                <option value="">—</option>
+                {PAPER_CONNECT.map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
             </Field>
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="DOB">
-                <TextInput type="date" value={details.dob} onChange={(e) => setDetails({ ...details, dob: e.target.value })} />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Date of birth">
+              <TextInput type="date" value={form.dob} onChange={(e) => set("dob", e.target.value)} />
+            </Field>
+            <Field label="Enroll date">
+              <TextInput type="date" value={form.enrollDate} onChange={(e) => set("enrollDate", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="First class date" hint="planned start">
+              <TextInput type="date" value={form.firstClassDate} onChange={(e) => set("firstClassDate", e.target.value)} />
+            </Field>
+            <Field label="First class attended" hint="set = Active">
+              <TextInput type="date" value={form.firstClassAttended} onChange={(e) => set("firstClassAttended", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="End date" hint="set when a student discontinues">
+              <TextInput type="date" value={form.endDate} onChange={(e) => set("endDate", e.target.value)} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="eEnrollment">
+              <ChipGroup
+                value={form.eEnrollmentCompleted ? "Completed" : "Not done"}
+                onChange={(v) => set("eEnrollmentCompleted", v === "Completed")}
+                options={["Not done", "Completed"]}
+              />
+            </Field>
+            <Field label="Work pickup day">
+              <Select value={form.workPickupDay ?? ""} onChange={(e) => set("workPickupDay", e.target.value || null)}>
+                <option value="">—</option>
+                {PICKUP_DAYS.map((o) => <option key={o} value={o}>{o}</option>)}
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="Class schedule (days)">
+            <ChipGroup multi value={form.schedule} onChange={(v) => set("schedule", v)} options={[...WEEKDAYS]} />
+          </Field>
+
+          {form.po && (
+            <div className="border-t border-line pt-3">
+              <p className="text-[13px] font-medium mb-2">
+                Latest PO{form.po.poDate && <span className="text-ink-tertiary font-normal"> · {form.po.poDate}</span>}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="PO status">
+                  <Select value={form.po.status ?? ""} onChange={(e) => setPo("status", e.target.value || null)}>
+                    <option value="">—</option>
+                    {PO_STATUS.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </Select>
+                </Field>
+                <Field label="PO outcome">
+                  <Select value={form.po.outcome ?? ""} onChange={(e) => setPo("outcome", e.target.value || null)}>
+                    <option value="">—</option>
+                    {PO_OUTCOME.map((o) => <option key={o} value={o}>{o}</option>)}
+                  </Select>
+                </Field>
+                <Field label="Planned start">
+                  <TextInput
+                    type="date"
+                    value={form.po.plannedStartDate ?? ""}
+                    onChange={(e) => setPo("plannedStartDate", e.target.value || null)}
+                  />
+                </Field>
+              </div>
+            </div>
+          )}
+
+          <div className="border-t border-line pt-3">
+            <p className="text-[13px] font-medium mb-2">Plan a break</p>
+            {form.invoiceAction && form.invoiceAction !== "Done" && (
+              <div className="mb-3 rounded-md bg-status-warning-bg text-status-warning-fg text-[12px] px-3 py-2">
+                Invoice to-do: <b>{form.invoiceAction}</b> — Adam will handle this in Invoice Ninja.
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Field label="Hold start">
+                <TextInput type="date" value={form.holdStart} onChange={(e) => set("holdStart", e.target.value)} />
               </Field>
-              <Field label="Enroll date">
-                <TextInput type="date" value={details.enrollDate} onChange={(e) => setDetails({ ...details, enrollDate: e.target.value })} />
+              <Field label="Planned return">
+                <TextInput type="date" value={form.plannedReturn} onChange={(e) => set("plannedReturn", e.target.value)} />
               </Field>
-              <Field label="First class date">
-                <TextInput type="date" value={details.firstClassDate} onChange={(e) => setDetails({ ...details, firstClassDate: e.target.value })} />
-              </Field>
-              <Field label="End date" hint="set this when a student discontinues">
-                <TextInput type="date" value={details.endDate} onChange={(e) => setDetails({ ...details, endDate: e.target.value })} />
+              <Field label="Check-in date" hint="when to reach out">
+                <TextInput type="date" value={form.breakCheckin} onChange={(e) => set("breakCheckin", e.target.value)} />
               </Field>
             </div>
-            <Field label="Lifecycle stage" hint="direct override — skips the KSIS/billing follow-ups that Stop/Restart fire">
-              <ChipGroup value={details.lifecycleStage} onChange={(v) => setDetails({ ...details, lifecycleStage: v })} options={LIFECYCLE_STAGES} />
+            <Field label="Break notes">
+              <TextInput
+                value={form.holdNotes}
+                onChange={(e) => set("holdNotes", e.target.value)}
+                placeholder="e.g. family travel in July"
+              />
+            </Field>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleBreakAction("plan")}
+                disabled={pending || !form.plannedReturn}
+                className="btn"
+              >
+                Plan break →
+              </button>
+              {form.lifecycleStage === "Planned Break" && (
+                <button
+                  type="button"
+                  onClick={() => handleBreakAction("return")}
+                  disabled={pending}
+                  className="btn btn-primary"
+                >
+                  Mark returned
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-ink-tertiary mt-1">
+              Set the dates, then <b>Plan break</b> → moves them to &ldquo;Planned Break&rdquo; and flags Adam to cancel the recurring invoice.{" "}
+              <b>Mark returned</b> sets them back to Active and flags Adam to reactivate it.
+            </p>
+          </div>
+
+          <div className="border-t border-line pt-3 space-y-3">
+            <Field label="Reason / notes" hint="optional — what changed and why">
+              <TextArea value={reason} onChange={(e) => setReason(e.target.value)} />
+            </Field>
+            <Field label="Submitted by" required>
+              <StaffNameSelect value={submittedBy} onChange={setSubmittedBy} />
             </Field>
           </div>
-        )
-      )}
-
-      {/* Schedule fields */}
-      {kind === "Schedule" && student && (
-        <>
-          <Field label="Days of week" hint={current.isPending ? "loading current schedule…" : "pick all days this student attends"}>
-            <ChipGroup multi value={schedule} onChange={setSchedule} options={WEEKDAYS} />
-          </Field>
-          <p className="text-[11px] text-ink-tertiary mb-4">
-            ⓘ If their pickup day also changed, run the form again with <span className="font-medium">Pickup Day</span> selected — that one needs KSIS sync.
-          </p>
-        </>
-      )}
-
-      {/* Pickup day fields */}
-      {kind === "Pickup Day" && student && (
-        <Field label="Pickup day" hint={current.isPending ? "loading…" : "which day they pick up their work"}>
-          <ChipGroup value={pickupDay} onChange={setPickupDay} options={PICKUP_DAYS} />
-        </Field>
-      )}
-
-      {/* Pause / Break expanded fields */}
-      {kind === "Pause / Break" && (
-        <div className="space-y-3 mb-2">
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Break start date" hint="when the break begins">
-              <TextInput type="date" value={breakStart} onChange={(e) => setBreakStart(e.target.value)} />
-            </Field>
-            <Field label="Expected return date" hint="required — triggers the return reminder" required>
-              <TextInput type="date" value={expectedReturn} onChange={(e) => setExpectedReturn(e.target.value)} />
-            </Field>
-          </div>
-          <Field label="Follow-up date" hint="when to reach out — typically ~2 weeks before return">
-            <TextInput type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
-          </Field>
         </div>
       )}
 
-      {/* Effective date for transitions */}
-      {needsEffectiveDate && (
-        <Field label="Effective date" required>
-          <TextInput type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
-        </Field>
-      )}
-
-      {/* Reason / notes — shown for all kinds */}
-      {kind && (
-        <Field
-          label={kind === "Other" ? "Describe what's changing" : "Reason / notes"}
-          required={kind === "Other"}
-          hint={
-            kind === "Other" ? "be specific — Adam will read this"
-            : kind === "Edit details" ? "optional — what changed and why"
-            : "optional — anything Adam should know"
-          }
-        >
-          <TextArea value={reason} onChange={(e) => setReason(e.target.value)} />
-        </Field>
-      )}
-
-      {/* KSIS checkbox for pickup day */}
-      {showKsisCheckbox && (
-        <div className="bg-tint-alerts-bg text-tint-alerts-fg rounded p-2.5 mb-4">
-          <label className="inline-flex items-center gap-2 text-[13px] cursor-pointer">
-            <input type="checkbox" checked={ksisDone} onChange={(e) => setKsisDone(e.target.checked)} />
-            <span className="font-medium">I already updated KSIS for this</span>
-            <span className="text-[12px] font-normal">— Adam won't see this as pending KSIS work</span>
-          </label>
-        </div>
-      )}
-
-      {/* Submitted by — required for ALL changes */}
-      {kind && (
-        <Field label="Submitted by" required>
-          <StaffNameSelect value={submittedBy} onChange={setSubmittedBy} />
-        </Field>
-      )}
-
-      {error && <p className="text-[12px] text-status-danger-fg mt-1 mb-2">{error}</p>}
+      {error && <p className="text-[12px] text-status-danger-fg mt-2 mb-1">{error}</p>}
     </Modal>
   );
 }

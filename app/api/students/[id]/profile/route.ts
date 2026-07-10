@@ -11,6 +11,31 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   try {
     const r = await airtable()(TABLE.Students).find(params.id);
     const s = (f: string) => (r.get(f) as string | null) ?? null;
+
+    // Fetch latest PO if any
+    const poIds = ((r.get("POs") as string[] | undefined) ?? []) as string[];
+    let po: Record<string, unknown> | null = null;
+    if (poIds.length > 0) {
+      const pos = await airtable()(TABLE.POs)
+        .select({
+          filterByFormula: `OR(${poIds.map((id) => `RECORD_ID()='${id}'`).join(",")})`,
+          fields: ["PO Date", "Status", "Outcome", "Planned Start Date"]
+        })
+        .all();
+      const latest = pos
+        .slice()
+        .sort((a, b) => ((b.get("PO Date") as string | null) ?? "").localeCompare((a.get("PO Date") as string | null) ?? ""))[0];
+      if (latest) {
+        po = {
+          id: latest.id,
+          poDate: (latest.get("PO Date") as string | null) ?? null,
+          status: (latest.get("Status") as string | null) ?? null,
+          outcome: (latest.get("Outcome") as string | null) ?? null,
+          plannedStartDate: (latest.get("Planned Start Date") as string | null) ?? null
+        };
+      }
+    }
+
     return NextResponse.json({
       ok: true,
       data: {
@@ -24,10 +49,18 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
         dob: s("DOB"),
         enrollDate: s("Enroll Date"),
         firstClassDate: s("First Class Date"),
+        firstClassAttended: s("First Class Attended Date"),
         endDate: s("End Date"),
         lifecycleStage: s("Lifecycle Stage"),
+        eEnrollmentCompleted: Boolean(r.get("eEnrollment Completed")),
         schedule: ((r.get("Schedule") as string[] | undefined) ?? []),
-        workPickupDay: s("Work Pickup Day")
+        workPickupDay: s("Work Pickup Day"),
+        holdStart: s("Hold Start"),
+        plannedReturn: s("Planned Return"),
+        breakCheckin: s("Break Check-in Date"),
+        holdNotes: s("Hold Notes"),
+        invoiceAction: s("Invoice Action"),
+        po
       }
     });
   } catch (err: unknown) {
@@ -55,8 +88,22 @@ const Body = z.object({
   dob: dateStr,
   enrollDate: dateStr,
   firstClassDate: dateStr,
+  firstClassAttended: dateStr,
   endDate: dateStr,
-  lifecycleStage: z.enum(LIFECYCLE_STAGES).nullable().optional()
+  lifecycleStage: z.enum(LIFECYCLE_STAGES).nullable().optional(),
+  eEnrollmentCompleted: z.boolean().optional(),
+  holdStart: dateStr,
+  plannedReturn: dateStr,
+  breakCheckin: dateStr,
+  holdNotes: z.string().max(500).nullable().optional(),
+  invoiceAction: z.string().nullable().optional(),
+  breakAction: z.enum(["plan", "return"]).optional(),
+  po: z.object({
+    id: z.string(),
+    status: z.string().optional(),
+    outcome: z.string().optional(),
+    plannedStartDate: dateStr
+  }).optional()
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
@@ -70,6 +117,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     }
     const d = parsed.data;
     const fields: Record<string, unknown> = {};
+
     if (d.schedule !== undefined) fields["Schedule"] = d.schedule;
     if (d.workPickupDay !== undefined) fields["Work Pickup Day"] = d.workPickupDay;
     if (d.subjects !== undefined) fields["Subjects"] = d.subjects;
@@ -81,18 +129,47 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (d.dob !== undefined) fields["DOB"] = d.dob;
     if (d.enrollDate !== undefined) fields["Enroll Date"] = d.enrollDate;
     if (d.firstClassDate !== undefined) fields["First Class Date"] = d.firstClassDate;
+    if (d.firstClassAttended !== undefined) fields["First Class Attended Date"] = d.firstClassAttended;
     if (d.endDate !== undefined) fields["End Date"] = d.endDate;
     if (d.lifecycleStage !== undefined) fields["Lifecycle Stage"] = d.lifecycleStage;
+    if (d.eEnrollmentCompleted !== undefined) fields["eEnrollment Completed"] = d.eEnrollmentCompleted;
+    if (d.holdStart !== undefined) fields["Hold Start"] = d.holdStart;
+    if (d.plannedReturn !== undefined) fields["Planned Return"] = d.plannedReturn;
+    if (d.breakCheckin !== undefined) fields["Break Check-in Date"] = d.breakCheckin;
+    if (d.holdNotes !== undefined) fields["Hold Notes"] = d.holdNotes ?? "";
+    if (d.invoiceAction !== undefined) fields["Invoice Action"] = d.invoiceAction ?? "";
 
-    if (Object.keys(fields).length === 0) {
-      return NextResponse.json({ ok: false, error: "Nothing to update" }, { status: 400 });
+    // Plan-a-break / return side effects — same logic as admin route.
+    if (d.breakAction === "plan") {
+      fields["Lifecycle Stage"] = "Planned Break";
+      fields["Invoice Action"] = "Cancel recurring";
+      fields["Break Reminder Sent"] = false;
+      if (d.plannedReturn) fields["Snooze Until"] = d.plannedReturn;
+    } else if (d.breakAction === "return") {
+      fields["Lifecycle Stage"] = "Active-Engaged";
+      fields["Invoice Action"] = "Reactivate";
+      fields["Snooze Until"] = "";
     }
 
-    const updated = await airtable()(TABLE.Students).update(
-      [{ id: params.id, fields: fields as Partial<FieldSet> }],
-      { typecast: true }
-    );
-    return NextResponse.json({ ok: true, data: { id: updated[0].id } });
+    if (Object.keys(fields).length > 0) {
+      await airtable()(TABLE.Students).update(
+        [{ id: params.id, fields: fields as Partial<FieldSet> }],
+        { typecast: true }
+      );
+    }
+
+    // Update PO fields if provided
+    if (d.po?.id) {
+      const pf: Partial<FieldSet> = {};
+      if (d.po.status !== undefined) pf["Status"] = d.po.status;
+      if (d.po.outcome !== undefined) pf["Outcome"] = d.po.outcome;
+      if (d.po.plannedStartDate !== undefined) pf["Planned Start Date"] = d.po.plannedStartDate ?? ("" as unknown as string);
+      if (Object.keys(pf).length > 0) {
+        await airtable()(TABLE.POs).update([{ id: d.po.id, fields: pf }], { typecast: true });
+      }
+    }
+
+    return NextResponse.json({ ok: true, data: { id: params.id } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
