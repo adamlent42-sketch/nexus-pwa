@@ -18,20 +18,15 @@ export async function GET() {
       .all();
 
     const data = records
-      .map((r) => {
-        const rawTier = r.get("Tier") as string | number | null | undefined;
-        const tierNum = rawTier == null ? Number.POSITIVE_INFINITY : Number(rawTier);
-        return {
-          id: r.id,
-          name: (r.get("Staff Name") as string | null) ?? "(unnamed)",
-          tier: Number.isFinite(tierNum) ? tierNum : null
-        };
-      })
+      .map((r) => ({
+        id: r.id,
+        name: (r.get("Staff Name") as string | null) ?? "(unnamed)"
+      }))
       .sort((a, b) => {
-        const at = a.tier ?? Number.POSITIVE_INFINITY;
-        const bt = b.tier ?? Number.POSITIVE_INFINITY;
-        if (at !== bt) return at - bt;
-        return a.name.localeCompare(b.name);
+        // Sort by first name A→Z
+        const aFirst = a.name.split(" ")[0] ?? a.name;
+        const bFirst = b.name.split(" ")[0] ?? b.name;
+        return aFirst.localeCompare(bFirst);
       });
 
     return NextResponse.json({ ok: true, data });

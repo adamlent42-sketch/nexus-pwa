@@ -43,7 +43,24 @@ export async function POST(req: NextRequest) {
         staffName = (s.get("Staff Name") as string) || staffName;
       } catch { /* name is optional */ }
       const dates = endDate && endDate !== startDate ? `${startDate} – ${endDate}` : startDate;
-      const approveUrl = `${req.nextUrl.origin}/admin/time-off`;
+      const reviewUrl = `${req.nextUrl.origin}/admin/time-off`;
+
+      // Build one-click approve link if APPROVE_SECRET is configured
+      let approveButton = `<a href="${reviewUrl}" style="background:#3F5AA8;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold;font-size:14px;display:inline-block">Review &amp; approve →</a>`;
+      try {
+        const secret = process.env.APPROVE_SECRET;
+        if (secret && first?.id) {
+          const enc = new TextEncoder();
+          const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+          const sig = await crypto.subtle.sign("HMAC", key, enc.encode(first.id));
+          const token = Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+          const oneClickUrl = `${req.nextUrl.origin}/api/time-off/approve?id=${first.id}&token=${token}`;
+          approveButton = `
+            <a href="${oneClickUrl}" style="background:#0F6E56;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold;font-size:14px;display:inline-block;margin-right:10px">✓ Approve</a>
+            <a href="${reviewUrl}" style="background:#3F5AA8;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold;font-size:14px;display:inline-block">Review in dashboard →</a>`;
+        }
+      } catch { /* one-click is optional */ }
+
       const html = `
         <div style="font-family:Arial,Helvetica,sans-serif;color:#222;max-width:480px">
           <h2 style="margin:0 0 4px;font-size:18px">New time-off request</h2>
@@ -54,9 +71,7 @@ export async function POST(req: NextRequest) {
             <tr><td style="color:#666;padding-right:14px">Dates</td><td>${esc(dates)}</td></tr>
             ${notes && notes.trim() ? `<tr><td style="color:#666;padding-right:14px;vertical-align:top">Note</td><td>${esc(notes.trim())}</td></tr>` : ""}
           </table>
-          <p style="margin:20px 0 0">
-            <a href="${approveUrl}" style="background:#3F5AA8;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:bold;font-size:14px;display:inline-block">Review &amp; approve →</a>
-          </p>
+          <p style="margin:20px 0 0">${approveButton}</p>
         </div>`;
       await sendEmail({ to: OWNER_EMAIL, subject: `Time-off request — ${staffName}, ${dates}`, html });
     } catch { /* notification is non-critical */ }

@@ -24,16 +24,17 @@ export async function GET(req: NextRequest) {
 
     const [staffRec, shiftRecs, timeOffRecs, closureRecs] = await Promise.all([
       airtable()(TABLE.Staff).find(staffId),
+      // Fetch all recurring shifts — filter by staffId in JS because ARRAYJOIN returns
+      // display names not record IDs, so FIND on the formula layer won't match.
       airtable()(TABLE.WeeklySchedule)
         .select({
-          filterByFormula: `FIND('${staffId}', ARRAYJOIN({Staff}))`,
-          fields: ["Day of Week", "Role", "Start Time", "End Time", "Specific Date"]
+          fields: ["Staff", "Day of Week", "Role", "Start Time", "End Time", "Specific Date"]
         })
         .all(),
       airtable()(TABLE.TimeOff)
         .select({
-          filterByFormula: `AND(FIND('${staffId}', ARRAYJOIN({Staff})), IS_AFTER({Start Date}, DATEADD('${today}', -1, 'days')), OR({Status}='Pending', {Status}='Approved'))`,
-          fields: ["Type", "Start Date", "End Date", "Status", "Notes"],
+          filterByFormula: `AND(IS_AFTER({Start Date}, DATEADD('${today}', -1, 'days')), OR({Status}='Pending', {Status}='Approved'))`,
+          fields: ["Staff", "Type", "Start Date", "End Date", "Status", "Notes"],
           sort: [{ field: "Start Date", direction: "asc" }]
         })
         .all(),
@@ -49,9 +50,12 @@ export async function GET(req: NextRequest) {
     const staffName = (staffRec.get("Staff Name") as string | null) ?? "";
     const staffEmail = (staffRec.get("Email") as string | null) ?? null;
 
-    // Recurring shifts only (no Specific Date one-offs)
+    // Recurring shifts only — filter by staffId and exclude one-off Specific Date entries
     const shifts = shiftRecs
-      .filter((r) => !r.get("Specific Date"))
+      .filter((r) => {
+        const links = (r.get("Staff") as string[] | undefined) ?? [];
+        return links.includes(staffId) && !r.get("Specific Date");
+      })
       .map((r) => ({
         id: r.id,
         dayOfWeek: (r.get("Day of Week") as string | null) ?? "",
@@ -61,7 +65,12 @@ export async function GET(req: NextRequest) {
       }))
       .sort((a, b) => (DAY_ORDER[a.dayOfWeek] ?? 99) - (DAY_ORDER[b.dayOfWeek] ?? 99));
 
-    const timeOff = timeOffRecs.map((r) => ({
+    const timeOff = timeOffRecs
+      .filter((r) => {
+        const links = (r.get("Staff") as string[] | undefined) ?? [];
+        return links.includes(staffId);
+      })
+      .map((r) => ({
       id: r.id,
       type: (r.get("Type") as string | null) ?? "",
       startDate: (r.get("Start Date") as string | null) ?? "",
