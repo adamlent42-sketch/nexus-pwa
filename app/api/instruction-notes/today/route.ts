@@ -38,7 +38,8 @@ export async function GET(req: NextRequest) {
           dateNoted: (r.get("Date Noted") as string | null) ?? null,
           createdAt: r._rawJson?.createdTime ?? null,
           studentName: lookup?.name ?? null,
-          studentSchedule: (lookup?.schedule ?? []) as DayOfWeek[]
+          studentSchedule: (lookup?.schedule ?? []) as DayOfWeek[],
+          studentGrade: lookup?.grade ?? null
         };
       })
       .filter((n) => n.studentSchedule.includes(dayName as DayOfWeek));

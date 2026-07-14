@@ -50,6 +50,9 @@ export function TodaysInstructionNotes() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[15px] font-medium leading-snug">
                     {n.studentName ?? "(student)"}
+                    {n.studentGrade && (
+                      <span className="ml-1.5 text-[12px] font-normal text-ink-secondary">Gr. {n.studentGrade}</span>
+                    )}
                     {n.category && (
                       <span className="ml-2 badge bg-tint-notes-bg text-tint-notes-fg font-normal">
                         {n.category}

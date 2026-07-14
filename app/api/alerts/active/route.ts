@@ -33,7 +33,8 @@ export async function GET() {
         // date-only and parses to UTC midnight, which is ~16h ago in ET.
         createdAt: r._rawJson?.createdTime ?? null,
         studentId: firstStudent ?? null,
-        studentName: firstStudent ? lookups.get(firstStudent)?.name ?? null : null
+        studentName: firstStudent ? lookups.get(firstStudent)?.name ?? null : null,
+        studentGrade: firstStudent ? lookups.get(firstStudent)?.grade ?? null : null
       };
     });
 

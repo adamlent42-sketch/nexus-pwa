@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       return {
         id: r.id,
         studentName: first ? lookups.get(first)?.name ?? null : null,
+        studentGrade: first ? lookups.get(first)?.grade ?? null : null,
         note: (r.get("Note") as string | null) ?? "",
         closingNote: (r.get("Closing Note") as string | null) ?? "",
         parentFacingVersion: (r.get("Parent-Facing Version") as string | null) ?? "",

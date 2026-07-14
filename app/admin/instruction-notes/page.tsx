@@ -14,6 +14,7 @@ import { formatDate } from "@/lib/utils";
 interface PendingNote {
   id: string;
   studentName: string | null;
+  studentGrade: string | null;
   note: string;
   closingNote: string;
   parentFacingVersion: string;
@@ -107,6 +108,7 @@ export default function AdminNotesPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[14px] font-medium">{note.studentName ?? "(student)"}</span>
+                        {note.studentGrade && <span className="text-[12px] text-ink-secondary">Gr. {note.studentGrade}</span>}
                         {note.category && <span className={`badge ${catTone}`}>{note.category}</span>}
                       </div>
                       <p className="text-[12px] text-ink-tertiary mt-0.5 truncate">

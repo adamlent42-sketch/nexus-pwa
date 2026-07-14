@@ -7,6 +7,7 @@ export const ALERT_CATEGORIES = [
   "Schedule change",
   "Behavior",
   "Pickup/logistics",
+  "Payments",
   "Other"
 ] as const;
 

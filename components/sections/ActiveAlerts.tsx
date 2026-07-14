@@ -54,6 +54,9 @@ export function ActiveAlerts() {
               <div className="flex-1 min-w-0">
                 <p className="text-[15px] font-bold leading-snug mb-0.5">
                   {a.studentName ?? "Staff alert"}
+                  {a.studentGrade && (
+                    <span className="ml-2 text-[12px] font-normal text-ink-secondary">Gr. {a.studentGrade}</span>
+                  )}
                 </p>
                 <p className="text-[14px] leading-snug">{a.alert}</p>
                 <p className="meta mt-1.5 flex items-center gap-2">

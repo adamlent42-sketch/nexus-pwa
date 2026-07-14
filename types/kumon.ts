@@ -50,6 +50,7 @@ export interface AlertRow {
   createdAt: string | null;
   studentId: RecordId | null;
   studentName: string | null;
+  studentGrade: string | null;
 }
 
 export interface InstructionNoteRow {
@@ -61,6 +62,7 @@ export interface InstructionNoteRow {
   createdAt: string | null;
   studentName: string | null;
   studentSchedule: DayOfWeek[];
+  studentGrade: string | null;
 }
 
 export interface NewStudentRow {

@@ -7,6 +7,7 @@ import type { DayOfWeek, RecordId } from "@/types/kumon";
 export interface StudentLookup {
   name: string;
   schedule: DayOfWeek[];
+  grade: string | null;
 }
 
 // Returns a Map keyed by student record ID. Missing IDs are simply absent.
@@ -20,7 +21,7 @@ export async function fetchStudentLookups(ids: RecordId[]): Promise<Map<RecordId
   const records = await airtable()(TABLE.Students)
     .select({
       filterByFormula: formula,
-      fields: ["Student Name", "Schedule"]
+      fields: ["Student Name", "Schedule", "Grade"]
     })
     .all();
 
@@ -28,7 +29,8 @@ export async function fetchStudentLookups(ids: RecordId[]): Promise<Map<RecordId
   for (const r of records) {
     const name = (r.get("Student Name") as string | null) ?? "(unnamed)";
     const schedule = ((r.get("Schedule") as DayOfWeek[] | null) ?? []) as DayOfWeek[];
-    out.set(r.id, { name, schedule });
+    const grade = (r.get("Grade") as string | null) ?? null;
+    out.set(r.id, { name, schedule, grade });
   }
   return out;
 }
