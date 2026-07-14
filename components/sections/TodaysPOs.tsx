@@ -85,7 +85,7 @@ export function TodaysPOs() {
                           <span>{po.student}</span>
                           {po.grade && (
                             <span className="ml-2 inline-block px-2 py-0.5 rounded text-[12px] bg-surface-subtle text-ink-secondary font-normal">
-                              Grade: {po.grade}
+                              Grade: {po.grade.replace(/^Grade:\s*/i, "")}
                             </span>
                           )}
                         </p>
