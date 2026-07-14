@@ -126,7 +126,13 @@ export async function POST(req: NextRequest) {
       }
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : "Unknown error";
+    let msg = "Unknown error";
+    if (err instanceof Error) {
+      msg = err.message;
+    } else if (typeof err === "object" && err !== null) {
+      const e = err as Record<string, unknown>;
+      msg = String(e.message ?? e.error ?? JSON.stringify(err));
+    }
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
