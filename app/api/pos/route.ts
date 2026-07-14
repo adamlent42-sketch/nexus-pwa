@@ -94,7 +94,6 @@ export async function POST(req: NextRequest) {
           "First Name": ns.firstName,
           "Last Name": ns.lastName,
           Family: [familyId],
-          Status: "Lead",
           "Lifecycle Stage": "PO Booked",
           ...(ns.grade ? { Grade: ns.grade } : {}),
           ...(ns.subjects.length ? { Subjects: ns.subjects } : {})
