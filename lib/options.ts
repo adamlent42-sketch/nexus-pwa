@@ -126,7 +126,7 @@ export const STAFF_TIERS = ["1", "2", "3", "4", "5", "6"] as const;
 export const STAFF_STATUSES = ["Active", "Departing", "Departed"] as const;
 export const STAFF_ROLES = ["OL", "CL", "CA", "FA", "DE", "Prep AM"] as const;
 
-export const PICKUP_DAYS = ["Tuesday", "Thursday", "Saturday"] as const;
+export const PICKUP_DAYS = ["Monday", "Tuesday", "Thursday", "Saturday"] as const;
 
 export const CLOSURE_REASONS = [
   "New Year's Day",
