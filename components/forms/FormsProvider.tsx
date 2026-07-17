@@ -17,6 +17,7 @@ import { StudentUpdateForm } from "./StudentUpdateForm";
 import { CreatePOForm } from "./CreatePOForm";
 import { StudentTimingForm } from "./StudentTimingForm";
 import { LogConversationModal } from "./LogConversationModal";
+import { POParentNoteForm } from "./POParentNoteForm";
 import type { PORow, InstructionNoteRow, AlertRow } from "@/types/kumon";
 
 interface PresetStudent { id: string; name: string; grade: string | null; status: string | null }
@@ -40,6 +41,7 @@ interface FormsCtx {
   openNoteEdit: (note: InstructionNoteRow) => void;
   openNoteSnooze: (note: InstructionNoteRow) => void;
   openLogConversation: () => void;
+  openPONote: (po: PORow) => void;
 }
 
 const Ctx = createContext<FormsCtx | null>(null);
@@ -70,6 +72,7 @@ export function FormsProvider({ children }: { children: ReactNode }) {
   const [noteEditNote, setNoteEditNote] = useState<InstructionNoteRow | null>(null);
   const [noteSnoozeNote, setNoteSnoozeNote] = useState<InstructionNoteRow | null>(null);
   const [logConvOpen, setLogConvOpen] = useState(false);
+  const [poNote, setPoNote] = useState<PORow | null>(null);
 
   const value: FormsCtx = {
     openStaffAlert: () => setStaffAlertOpen(true),
@@ -88,7 +91,8 @@ export function FormsProvider({ children }: { children: ReactNode }) {
     openNoteUpdate: (note) => setNoteUpdateNote(note),
     openNoteEdit: (note) => setNoteEditNote(note),
     openNoteSnooze: (note) => setNoteSnoozeNote(note),
-    openLogConversation: () => setLogConvOpen(true)
+    openLogConversation: () => setLogConvOpen(true),
+    openPONote: (po) => setPoNote(po)
   };
 
   return (
@@ -124,6 +128,7 @@ export function FormsProvider({ children }: { children: ReactNode }) {
         studentName={timingTarget?.name ?? null}
       />
       <LogConversationModal open={logConvOpen} onClose={() => setLogConvOpen(false)} />
+      <POParentNoteForm open={!!poNote} onClose={() => setPoNote(null)} po={poNote} />
     </Ctx.Provider>
   );
 }

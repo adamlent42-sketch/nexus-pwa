@@ -189,3 +189,12 @@ export function useSnoozeNote() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["instruction-notes"] })
   });
 }
+
+export function useUpdatePONote() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ poId, parentNotes }: { poId: string; parentNotes: string }) =>
+      postJson<{ id: string }>(`/api/pos/${poId}/note`, { parentNotes }, "PATCH"),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["pos"] })
+  });
+}

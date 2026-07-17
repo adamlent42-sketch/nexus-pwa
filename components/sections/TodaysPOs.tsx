@@ -85,7 +85,7 @@ export function TodaysPOs() {
                           <span>{po.student}</span>
                           {po.grade && (
                             <span className="ml-2 inline-block px-2 py-0.5 rounded text-[12px] bg-surface-subtle text-ink-secondary font-normal">
-                              Grade: {po.grade.replace(/^Grade:\s*/i, "")}
+                              Grade: {po.grade}
                             </span>
                           )}
                         </p>
@@ -103,6 +103,13 @@ export function TodaysPOs() {
                         )}
                       </div>
                       <div className="shrink-0 flex items-center gap-2">
+                        <button
+                          onClick={() => forms.openPONote(po)}
+                          className="btn"
+                          title={po.parentNotes ? "Edit parent note" : "Add parent note"}
+                        >
+                          {po.parentNotes ? "Edit note" : "Add note"}
+                        </button>
                         <button
                           onClick={() => forms.openReschedule(po)}
                           className="btn"
