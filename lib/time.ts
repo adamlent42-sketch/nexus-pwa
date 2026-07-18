@@ -62,7 +62,7 @@ export function nowInET(): string {
 
 // Parses "4:30 PM" → "16:30", "8 AM" → "08:00". Returns null if it can't.
 export function parseTime12h(text: string): string | null {
-  const m = text.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([APap][Mm])$/);
+  const m = text.trim().match(/^(\d{1,2})(?::(\d{2}))?\s*([APap][Mm])/);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = m[2] ? parseInt(m[2], 10) : 0;
