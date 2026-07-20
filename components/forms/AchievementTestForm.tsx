@@ -4,19 +4,19 @@ import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Field, TextArea, TextInput } from "@/components/ui/Field";
-import { ChipGroup } from "@/components/ui/ChipGroup";
 import { StudentSelect } from "@/components/ui/StudentSelect";
 import { StaffNameSelect } from "@/components/ui/StaffNameSelect";
 import { useCreateAchievementTest } from "@/lib/mutations";
 import { useToast } from "@/lib/toast";
 import { AchievementTestCreate } from "@/lib/schemas";
+import { cn } from "@/lib/utils";
 
 interface Student { id: string; name: string; grade: string | null; status: string | null }
 interface Props { open: boolean; onClose: () => void }
 
 export function AchievementTestForm({ open, onClose }: Props) {
   const [student, setStudent] = useState<Student | null>(null);
-  const [subject, setSubject] = useState<string | null>("Math");
+  const [subject, setSubject] = useState<string | null>(null);
   const [level, setLevel] = useState("");
   const [score, setScore] = useState("");
   const [time, setTime] = useState("");
@@ -29,16 +29,17 @@ export function AchievementTestForm({ open, onClose }: Props) {
 
   useEffect(() => {
     if (!open) {
-      setStudent(null); setSubject("Math"); setLevel(""); setScore(""); setTime("");
+      setStudent(null); setSubject(null); setLevel(""); setScore(""); setTime("");
       setNotes(""); setSubmittedBy(""); setError(null);
     }
   }, [open]);
 
   const submit = async () => {
     setError(null);
+    if (!subject) { setError("Please select a subject — Math or Reading"); return; }
     const payload = {
       studentId: student?.id ?? "",
-      subject: (subject ?? "Math") as "Math" | "Reading",
+      subject: subject as "Math" | "Reading",
       level: level.trim(),
       score: parseInt(score, 10),
       timeMinutes: parseInt(time, 10),
@@ -84,14 +85,29 @@ export function AchievementTestForm({ open, onClose }: Props) {
         </Field>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Subject" required>
-          <ChipGroup value={subject} onChange={setSubject} options={["Math", "Reading"]} />
-        </Field>
-        <Field label="Level" required hint="e.g. D, 2A, F-II">
-          <TextInput value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. D" />
-        </Field>
-      </div>
+      <Field label="Subject" required hint="Select one — no default">
+        <div className="grid grid-cols-2 gap-3 mt-1">
+          {(["Math", "Reading"] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => setSubject(s)}
+              className={cn(
+                "py-3 rounded-lg border-2 text-[15px] font-semibold transition-all",
+                subject === s
+                  ? "bg-brand text-white border-brand shadow-sm"
+                  : "bg-surface border-line text-ink-secondary hover:border-brand hover:text-ink-primary"
+              )}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Level" required hint="e.g. D, 2A, F-II">
+        <TextInput value={level} onChange={(e) => setLevel(e.target.value)} placeholder="e.g. D" />
+      </Field>
 
       <div className="bg-tint-pos-bg text-tint-pos-fg text-[12px] rounded p-2 mb-4">
         Goal time and Out-of will be pulled from Test Goal Times when you save.
