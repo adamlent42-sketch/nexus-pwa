@@ -41,9 +41,8 @@ export type LifecycleBucket = "active" | "preStart" | "didNotEnroll" | "poMissed
 export function lifecycleBucket(lifecycle: string | null | undefined): LifecycleBucket {
   if (!lifecycle) return "active";
   if (lifecycle === "Active-Engaged" || lifecycle === "Active-At-Risk") return "active";
-  if (lifecycle === "PO Booked" || lifecycle === "Pending Start" || lifecycle === "Pending Start State") return "preStart";
+  if (lifecycle === "PO Booked" || lifecycle === "Pending Start") return "preStart";
   if (
-    lifecycle === "PO Attended - Did Not Enroll" ||
     lifecycle === "PO Attended - Plan to Enroll" ||
     lifecycle === "PO Attended - Undecided"
   ) return "didNotEnroll";
@@ -161,20 +160,17 @@ export const PAPER_CONNECT = ["Paper", "Kumon Connect"] as const;
 export const LIFECYCLE_STAGES = [
   "PO Booked",
   "Pending Start",
-  "Pending Start State",
   "Active-Engaged",
   "Active-At-Risk",
   "PO Attended - Plan to Enroll",
   "PO Attended - Undecided",
-  "PO Attended - Did Not Enroll",
   "PO No-Show",
   "PO Cancelled",
   "Recently Discontinued",
   "Long Lapsed",
   "Reactivation Target",
   "No Interest",
-  "Historical",
-  "Attended PO"
+  "Historical"
 ] as const;
 
 export const CHANGE_REQUEST_TYPES = [

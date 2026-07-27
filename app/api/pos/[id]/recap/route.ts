@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { airtable, TABLE } from "@/lib/airtable";
 import { PORecapSubmit } from "@/lib/schemas";
-import { computeLifecycle, shouldAutoFinalize } from "@/lib/po-lifecycle";
+import { computeLifecycle } from "@/lib/po-lifecycle";
 import { enqueuePoFollowup } from "@/lib/outbox";
 import type { FieldSet } from "airtable";
 
@@ -19,16 +19,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       );
     }
     const d = parsed.data;
-    // Auto-finalize (skip the owner review queue) when EITHER the outcome is
-    // deterministic (no-show / family-cancelled) OR Adam himself did the recap —
-    // his own recaps don't need self-approval; staff recaps still queue for review.
-    const submitterIsAdam = /\badam\b/i.test(d.submittedBy ?? "");
-    const autoFinalize = shouldAutoFinalize(d.status) || submitterIsAdam;
-
+    // All recaps finalize immediately — no owner review queue. Staff are trusted;
+    // Adam can review history in Admin → PO Recaps at any time.
     const fields: Partial<FieldSet> = {
       Status: d.status,
       "Staff Notes ": d.staffNotes,
-      "Recap Status": autoFinalize ? "Reviewed" : "Submitted - Pending Owner Review"
+      "Recap Status": "Submitted"
     };
     if (d.outcome) fields["Outcome"] = d.outcome;
     if (d.eEnrollmentCompleted !== undefined) fields["eEnrollment Form Completed"] = d.eEnrollmentCompleted;
@@ -67,10 +63,10 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
     }
 
-    // If auto-finalizing, also push the student lifecycle
+    // Always push the student lifecycle on submission.
     let lifecyclePushed: string | null = null;
     let studentsPushed = 0;
-    if (autoFinalize) {
+    {
       const stage = computeLifecycle(d.status, d.outcome ?? null, d.plannedStartDate ?? null);
       if (stage) {
         const po = await airtable()(TABLE.POs).find(id);
@@ -117,7 +113,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 
     return NextResponse.json({
       ok: true,
-      data: { id, autoFinalized: autoFinalize, lifecyclePushed, studentsPushed }
+      data: { id, lifecyclePushed, studentsPushed }
     });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";

@@ -97,15 +97,13 @@ export function PORecapForm({ open, onClose, po }: Props) {
     }
     try {
       const result = await mutation.mutateAsync(parsed.data);
-      const r = result as { autoFinalized?: boolean; lifecyclePushed?: string | null; studentsPushed?: number };
+      const r = result as { lifecyclePushed?: string | null; studentsPushed?: number };
       if (isEdit) {
         toast.push("Recap updated.", "success");
-      } else if (r.autoFinalized && r.lifecyclePushed) {
-        toast.push(`Recap finalized - ${r.studentsPushed ?? 0} student moved to ${r.lifecyclePushed}. Outreach will follow up.`, "success");
-      } else if (r.autoFinalized) {
-        toast.push("Recap finalized.", "success");
+      } else if (r.lifecyclePushed) {
+        toast.push(`Recap saved — ${r.studentsPushed ?? 0} student moved to ${r.lifecyclePushed}.`, "success");
       } else {
-        toast.push("Recap submitted. Pending owner review.", "success");
+        toast.push("Recap saved.", "success");
       }
       onClose();
     } catch (e) {
@@ -271,7 +269,7 @@ export function PORecapForm({ open, onClose, po }: Props) {
 
       {error && <p className="text-[12px] text-status-danger-fg mt-1 mb-2">{error}</p>}
       <p className="text-[11px] text-ink-tertiary mt-2">
-        No emails fire on submit. If Adam is the one recapping, it applies right away; otherwise it goes to Adam's review queue in Admin.
+        Recap applies immediately — student lifecycle updates on save. Review history any time in Admin → PO Recaps.
       </p>
     </Modal>
   );

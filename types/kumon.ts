@@ -5,7 +5,7 @@ export type RecordId = string;
 
 export type POStatus = "Scheduled" | "Rescheduled" | "Attended" | "Not Attended" | "Family Cancelled" | "Instructor Cancelled";
 export type POOutcome = "Plan to Enroll" | "Undecided" | "Enrolled" | "Not Interested" | "Not Yet Set";
-export type RecapStatus = "Submitted - Pending Owner Review" | "Reviewed" | "Legacy - Pre-Workflow" | null;
+export type RecapStatus = "Submitted" | "Legacy - Pre-Workflow" | null;
 export type Subject = "Math" | "Reading";
 export type DayOfWeek = "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday" | "Sunday";
 
@@ -50,7 +50,6 @@ export interface AlertRow {
   createdAt: string | null;
   studentId: RecordId | null;
   studentName: string | null;
-  studentGrade: string | null;
 }
 
 export interface InstructionNoteRow {
@@ -62,7 +61,6 @@ export interface InstructionNoteRow {
   createdAt: string | null;
   studentName: string | null;
   studentSchedule: DayOfWeek[];
-  studentGrade: string | null;
 }
 
 export interface NewStudentRow {
