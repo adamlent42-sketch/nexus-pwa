@@ -717,6 +717,20 @@ export default function POAdminPage() {
             </div>
           </div>
 
+          {/* Lifecycle flow */}
+          <div className="px-4 py-3 border-b border-line">
+            <p className="text-[10px] font-semibold text-ink-tertiary uppercase tracking-widest mb-2">What the system does automatically after each outcome</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-ink-secondary leading-snug">
+              <div><span className="font-medium">Plan to Enroll + start date</span> → <em>Pending Start</em> → welcome email 7 days before first class</div>
+              <div><span className="font-medium">Plan to Enroll, no date yet</span> → <em>PO Attended – Plan to Enroll</em> → cadence engine follows up every few days until date is locked in</div>
+              <div><span className="font-medium">Undecided</span> → <em>PO Attended – Undecided</em> → low-pressure follow-up sequence over 30 days</div>
+              <div><span className="font-medium">Not Interested</span> → <em>No Interest</em> → excluded from all outreach</div>
+              <div><span className="font-medium">No-show</span> → <em>PO No-Show</em> → reschedule offer (3 follow-ups, 45 days)</div>
+              <div><span className="font-medium">Family Cancelled</span> → <em>PO Cancelled</em> → winback sequence (4 touches, 30 days)</div>
+            </div>
+            <p className="text-ink-tertiary mt-2">All follow-up emails are drafted in Gmail for Adam to review — nothing sends automatically.</p>
+          </div>
+
           {/* No-show + Reviewed rows side-by-side */}
           <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-line">
             <div className="px-4 py-3">
