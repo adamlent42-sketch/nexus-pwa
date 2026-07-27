@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
       .select({
         filterByFormula: `AND(
           NOT({Recap Status} = 'Reviewed'),
+          NOT({Recap Status} = 'Submitted'),
           NOT({Recap Status} = 'Legacy - Pre-Workflow'),
           {PO Date},
           IS_AFTER({PO Date}, DATEADD('${today}', -180, 'days')),

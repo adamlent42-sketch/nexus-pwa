@@ -28,11 +28,7 @@ export async function GET(req: NextRequest) {
     const cutoff45 = addDays(today, -45);
     const now = Date.now();
 
-    const [recapRecs, timeOffRecs, changeRecs, outboxRecs, pastDueRecs, missing, recentStartRecs, outreach] = await Promise.all([
-      airtable()(TABLE.POs).select({
-        filterByFormula: `{Recap Status}='Submitted - Pending Owner Review'`,
-        fields: ["Recap Status"]
-      }).all(),
+    const [timeOffRecs, changeRecs, outboxRecs, pastDueRecs, missing, recentStartRecs, outreach] = await Promise.all([
       airtable()(TABLE.TimeOff).select({
         filterByFormula: `{Status}='Pending'`,
         fields: ["Status"]
@@ -79,11 +75,6 @@ export async function GET(req: NextRequest) {
     const outboxIssues = failed + stuck;
 
     const items: AttentionItem[] = [
-      {
-        key: "recap-approvals", label: "PO recaps to approve", count: recapRecs.length,
-        tone: recapRecs.length > 0 ? "red" : "green", href: "/admin/po-recaps",
-        hint: "staff-submitted recaps waiting on you"
-      },
       {
         key: "time-off", label: "Time-off requests", count: timeOffRecs.length,
         tone: timeOffRecs.length > 0 ? "red" : "green", href: "/admin/time-off",
