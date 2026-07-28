@@ -40,14 +40,14 @@ export type LifecycleBucket = "active" | "preStart" | "didNotEnroll" | "poMissed
 
 export function lifecycleBucket(lifecycle: string | null | undefined): LifecycleBucket {
   if (!lifecycle) return "active";
-  if (lifecycle === "Active-Engaged" || lifecycle === "Active-At-Risk") return "active";
+  if (lifecycle === "Active-Engaged" || lifecycle === "Active-At-Risk" || lifecycle === "Planned Break") return "active";
   if (lifecycle === "PO Booked" || lifecycle === "Pending Start") return "preStart";
   if (
     lifecycle === "PO Attended - Plan to Enroll" ||
     lifecycle === "PO Attended - Undecided"
   ) return "didNotEnroll";
   if (lifecycle === "PO No-Show" || lifecycle === "PO Cancelled") return "poMissed";
-  if (lifecycle === "Recently Discontinued" || lifecycle === "Long Lapsed" || lifecycle === "Reactivation Target" || lifecycle === "Historical") return "winBack";
+  if (lifecycle === "Recently Discontinued" || lifecycle === "Long Lapsed" || lifecycle === "Reactivation Target" || lifecycle === "No Interest" || lifecycle === "DNC" || lifecycle === "Historical") return "winBack";
   return "active";
 }
 
@@ -162,6 +162,7 @@ export const LIFECYCLE_STAGES = [
   "Pending Start",
   "Active-Engaged",
   "Active-At-Risk",
+  "Planned Break",
   "PO Attended - Plan to Enroll",
   "PO Attended - Undecided",
   "PO No-Show",
@@ -170,6 +171,7 @@ export const LIFECYCLE_STAGES = [
   "Long Lapsed",
   "Reactivation Target",
   "No Interest",
+  "DNC",
   "Historical"
 ] as const;
 
