@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import type { FieldSet } from "airtable";
 import { airtable, TABLE } from "@/lib/airtable";
-import { WEEKDAYS, PICKUP_DAYS, SUBJECTS, GRADES, PAPER_CONNECT, LIFECYCLE_STAGES } from "@/lib/options";
+import { WEEKDAYS, PICKUP_DAYS, GRADES, PAPER_CONNECT, LIFECYCLE_STAGES } from "@/lib/options";
 
 export const dynamic = "force-dynamic";
 
@@ -79,7 +79,7 @@ const dateStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional();
 const Body = z.object({
   schedule: z.array(z.enum(WEEKDAYS)).optional(),
   workPickupDay: z.enum(PICKUP_DAYS).nullable().optional(),
-  subjects: z.array(z.enum(SUBJECTS)).optional(),
+  subjects: z.array(z.string()).optional(),
   mathLevel: z.string().max(40).nullable().optional(),
   readingLevel: z.string().max(40).nullable().optional(),
   grade: z.enum(GRADES).nullable().optional(),
