@@ -6,6 +6,7 @@ import { TodaysPOs } from "@/components/sections/TodaysPOs";
 import { TodaysInstructionNotes } from "@/components/sections/TodaysInstructionNotes";
 import { Onboarding } from "@/components/sections/Onboarding";
 import { RecentlyStarted } from "@/components/sections/RecentlyStarted";
+import { ReturningStudents } from "@/components/sections/ReturningStudents";
 import { TodaysStaff } from "@/components/sections/TodaysStaff";
 import { TomorrowPreview } from "@/components/sections/TomorrowPreview";
 import { FormsProvider } from "@/components/forms/FormsProvider";
@@ -35,6 +36,9 @@ export default function Page() {
           </div>
           <div id="recently-started" className="scroll-mt-4">
             <RecentlyStarted />
+          </div>
+          <div id="on-break" className="scroll-mt-4">
+            <ReturningStudents />
           </div>
         </div>
 
