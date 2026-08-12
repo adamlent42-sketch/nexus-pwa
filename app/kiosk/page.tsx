@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { X } from "lucide-react";
 
-// -- Types -------------------------------------------------------------------
+// ── Types ────────────────────────────────────────────────────────────────────
 
 type KioskState =
   | { type: "idle" }
+  | { type: "manual" }
   | { type: "loading" }
   | { type: "checkin"; firstName: string; streak: number; milestone: number | null; birthday: boolean; subjects: string[] }
   | { type: "checkout"; firstName: string; durationMinutes: number; subjects: string[] }
@@ -24,11 +26,19 @@ interface CheckinResponse {
   subjectCount?: number;
 }
 
-// -- Constants ---------------------------------------------------------------
+interface StudentRow {
+  id: string;
+  name: string;
+  firstName: string | null;
+  subjects: string[];
+  grade: string | null;
+}
+
+// ── Constants ────────────────────────────────────────────────────────────────
 
 const RESET_DELAY_MS = 4000; // return to idle after showing result
 
-// -- Helpers -----------------------------------------------------------------
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -45,7 +55,7 @@ function getStreakEmoji(streak: number): string {
   return "✨";
 }
 
-// -- Component ---------------------------------------------------------------
+// ── Component ────────────────────────────────────────────────────────────────
 
 export default function KioskPage() {
   const [state, setState] = useState<KioskState>({ type: "idle" });
@@ -54,10 +64,12 @@ export default function KioskPage() {
   const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const submittingRef = useRef(false);
 
-  // Always keep the hidden input focused
+  const isManual = state.type === "manual";
+
+  // Keep the hidden input focused (disabled while manual overlay is open)
   const refocusInput = useCallback(() => {
-    inputRef.current?.focus();
-  }, []);
+    if (!isManual) inputRef.current?.focus();
+  }, [isManual]);
 
   useEffect(() => {
     refocusInput();
@@ -69,11 +81,11 @@ export default function KioskPage() {
     resetTimerRef.current = setTimeout(() => {
       setState({ type: "idle" });
       setBuffer("");
-      refocusInput();
+      setTimeout(() => inputRef.current?.focus(), 50);
     }, RESET_DELAY_MS);
-  }, [refocusInput]);
+  }, []);
 
-  // Submit scanned barcode to API
+  // Core check-in/out logic — shared by scanner and manual picker
   const submitScan = useCallback(async (scannedId: string) => {
     if (submittingRef.current) return;
     const id = scannedId.trim();
@@ -128,32 +140,37 @@ export default function KioskPage() {
     }
   }, [scheduleReset]);
 
-  // Capture keystrokes from HID barcode scanner
+  // Capture keystrokes from HID barcode scanner — suspended while manual overlay is open
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (isManual) return;
     if (e.key === "Enter") {
       const scanned = buffer.trim();
       if (scanned) submitScan(scanned);
       else setBuffer("");
       return;
     }
-    // Accumulate printable characters
     if (e.key.length === 1) {
       setBuffer((prev) => prev + e.key);
     }
-  }, [buffer, submitScan]);
+  }, [buffer, submitScan, isManual]);
+
+  const openManual = useCallback(() => setState({ type: "manual" }), []);
+  const closeManual = useCallback(() => {
+    setState({ type: "idle" });
+    setTimeout(() => inputRef.current?.focus(), 50);
+  }, []);
 
   return (
-    // Clicking anywhere refocuses the hidden input
     <div
       className="w-full h-full flex flex-col items-center justify-center select-none cursor-default"
       onClick={refocusInput}
       onTouchEnd={refocusInput}
     >
-      {/* Hidden input -- captures all barcode scanner keystrokes */}
+      {/* Hidden input — captures all barcode scanner keystrokes */}
       <input
         ref={inputRef}
         onKeyDown={handleKeyDown}
-        onChange={() => {}} // controlled via keydown
+        onChange={() => {}}
         value={buffer}
         className="absolute opacity-0 pointer-events-none w-0 h-0"
         aria-label="Barcode input"
@@ -164,22 +181,26 @@ export default function KioskPage() {
       />
 
       {/* State screens */}
-      {state.type === "idle" && <IdleScreen />}
+      {state.type === "idle" && <IdleScreen onManual={openManual} />}
       {state.type === "loading" && <LoadingScreen />}
       {state.type === "checkin" && <CheckInScreen s={state} />}
       {state.type === "checkout" && <CheckOutScreen s={state} />}
       {state.type === "unknown" && <UnknownScreen />}
       {state.type === "ignored" && <IgnoredScreen s={state} />}
+
+      {/* Manual overlay — rendered on top of whatever state is showing */}
+      {state.type === "manual" && (
+        <ManualOverlay onClose={closeManual} onSelect={submitScan} />
+      )}
     </div>
   );
 }
 
-// -- State Screens ------------------------------------------------------------
+// ── State Screens ─────────────────────────────────────────────────────────────
 
-function IdleScreen() {
+function IdleScreen({ onManual }: { onManual: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-8 text-center px-8">
-      {/* Kumon logo wordmark */}
+    <div className="w-full h-full flex flex-col items-center justify-center gap-8 text-center px-8 relative">
       <div className="text-brand font-display font-black text-[72px] leading-none tracking-tight">
         KUMON
       </div>
@@ -189,6 +210,15 @@ function IdleScreen() {
       <div className="mt-4 text-[18px] text-ink-tertiary animate-pulse">
         Waiting for scan...
       </div>
+
+      {/* Unobtrusive staff button — bottom-right corner */}
+      <button
+        className="absolute bottom-6 right-6 text-[13px] text-ink-tertiary border border-surface-border rounded-lg px-3 py-2 hover:bg-surface-subtle transition-colors"
+        onClick={(e) => { e.stopPropagation(); onManual(); }}
+        onTouchEnd={(e) => { e.stopPropagation(); onManual(); }}
+      >
+        Staff: Manual check-in / out
+      </button>
     </div>
   );
 }
@@ -197,7 +227,7 @@ function LoadingScreen() {
   return (
     <div className="flex flex-col items-center gap-6">
       <div className="w-16 h-16 border-4 border-brand border-t-transparent rounded-full animate-spin" />
-      <p className="text-ink-secondary text-[22px]">Looking you up...</p>
+      <p className="text-ink-secondary text-[22px]">Looking you up…</p>
     </div>
   );
 }
@@ -208,39 +238,35 @@ function CheckInScreen({ s }: { s: Extract<KioskState, { type: "checkin" }> }) {
 
   return (
     <div className="flex flex-col items-center gap-6 text-center px-8 max-w-[900px]">
-      {/* Birthday takes top priority */}
       {isBirthday && (
         <div className="text-[72px] leading-none animate-bounce">🎂</div>
       )}
-      {/* Milestone emoji */}
       {isMilestone && !isBirthday && (
         <div className="text-[72px] leading-none">{getStreakEmoji(s.milestone!)}</div>
       )}
-      {/* Welcome message */}
-      <div className={`font-display font-black leading-tight ${isBirthday || isMilestone ? "text-[60px]" : "text-[80px]"}`}
-        style={{ color: isBirthday ? "#e91e8c" : "#3F5AA8" }}>
+      <div
+        className={`font-display font-black leading-tight ${isBirthday || isMilestone ? "text-[60px]" : "text-[80px]"}`}
+        style={{ color: isBirthday ? "#e91e8c" : "#3F5AA8" }}
+      >
         {isBirthday ? `Happy Birthday Week, ${s.firstName}!` : `Welcome, ${s.firstName}!`}
       </div>
-      {/* Milestone callout */}
       {isMilestone && (
         <div className="bg-yellow-400 text-yellow-900 font-display font-black text-[40px] px-8 py-4 rounded-2xl shadow-lg">
           🏆 {s.milestone}-Week Streak!
         </div>
       )}
-      {/* Streak counter (non-milestone) */}
       {!isMilestone && s.streak > 0 && (
         <div className="text-[28px] text-ink-secondary font-body">
           {getStreakEmoji(s.streak)} Week streak: <strong>{s.streak}</strong>
         </div>
       )}
-      {/* Subjects info */}
       {s.subjects.length > 0 && (
         <div className="text-[22px] text-ink-tertiary font-body">
           {s.subjects.join(" + ")} today
         </div>
       )}
       <div className="text-[20px] text-status-success-fg font-body font-medium mt-2">
-        Checked in
+        ✓ Checked in
       </div>
     </div>
   );
@@ -258,7 +284,7 @@ function CheckOutScreen({ s }: { s: Extract<KioskState, { type: "checkout" }> })
         {s.subjects.length > 0 && ` · ${s.subjects.join(" + ")}`}
       </div>
       <div className="text-[20px] text-status-success-fg font-body font-medium mt-2">
-        Checked out
+        ✓ Checked out
       </div>
     </div>
   );
@@ -284,6 +310,114 @@ function IgnoredScreen({ s }: { s: Extract<KioskState, { type: "ignored" }> }) {
       <div className="text-[64px] leading-none">👍</div>
       <div className="font-display font-black text-[64px] text-ink-primary leading-tight">
         Already checked in, {s.firstName}!
+      </div>
+    </div>
+  );
+}
+
+// ── Manual Check-In Overlay ───────────────────────────────────────────────────
+
+function ManualOverlay({
+  onClose,
+  onSelect
+}: {
+  onClose: () => void;
+  onSelect: (id: string) => void;
+}) {
+  const [students, setStudents] = useState<StudentRow[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    searchRef.current?.focus();
+    fetch("/api/checkin/students")
+      .then((r) => r.json())
+      .then((j: { ok: boolean; data?: StudentRow[] }) => {
+        if (j.ok && j.data) setStudents(j.data);
+        else setError("Could not load students");
+      })
+      .catch(() => setError("Could not load students"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const filtered = students.filter((s) =>
+    s.name.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col overflow-hidden"
+        style={{ maxHeight: "80vh" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-surface-subtle shrink-0">
+          <h2 className="text-[17px] font-semibold">Manual Check-In / Out</h2>
+          <button
+            className="text-ink-tertiary hover:text-ink-primary p-1 rounded-lg hover:bg-surface-subtle transition-colors"
+            onClick={onClose}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-4 py-3 border-b border-surface-subtle shrink-0">
+          <input
+            ref={searchRef}
+            type="text"
+            placeholder="Search by name…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-surface-border rounded-lg px-3 py-2.5 text-[15px] focus:outline-none focus:ring-2 focus:ring-brand"
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+          />
+        </div>
+
+        {/* Student list */}
+        <div className="overflow-y-auto flex-1">
+          {loading ? (
+            <div className="p-8 text-center text-ink-tertiary text-[15px]">Loading…</div>
+          ) : error ? (
+            <div className="p-8 text-center text-status-danger-fg text-[15px]">{error}</div>
+          ) : filtered.length === 0 ? (
+            <div className="p-8 text-center text-ink-tertiary text-[15px]">No students found</div>
+          ) : (
+            filtered.map((s) => (
+              <button
+                key={s.id}
+                className="w-full text-left px-5 py-3.5 border-b border-surface-subtle last:border-0 hover:bg-surface-subtle active:bg-surface-muted transition-colors"
+                onClick={() => onSelect(s.id)}
+              >
+                <div className="text-[15px] font-medium leading-tight">
+                  {s.name}
+                  {s.grade && (
+                    <span className="ml-2 text-[12px] text-ink-tertiary font-normal">Gr {s.grade}</span>
+                  )}
+                </div>
+                {s.subjects.length > 0 && (
+                  <div className="text-[13px] text-ink-tertiary mt-0.5">
+                    {s.subjects.join(" + ")}
+                  </div>
+                )}
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 py-3 border-t border-surface-subtle shrink-0 text-[12px] text-ink-tertiary text-center">
+          {filtered.length} student{filtered.length !== 1 ? "s" : ""}
+          {search ? " matched" : " total"}
+        </div>
       </div>
     </div>
   );
