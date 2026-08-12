@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { airtable, TABLE } from "@/lib/airtable";
-import { sendEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -62,45 +61,17 @@ export async function GET(req: NextRequest) {
 
     // Pull name + dates for the confirmation page
     let staffName = "";
-    let staffEmail = "";
     let dates = "";
-    let type = "";
     try {
       const links = (rec.get("Staff") as string[] | undefined) ?? [];
       if (links[0]) {
         const s = await airtable()(TABLE.Staff).find(links[0]);
         staffName = (s.get("Staff Name") as string | null) ?? "";
-        staffEmail = (s.get("Email") as string | null) ?? "";
       }
       const start = (rec.get("Start Date") as string | null) ?? "";
       const end = (rec.get("End Date") as string | null) ?? null;
       dates = end && end !== start ? `${start} – ${end}` : start;
-      type = (rec.get("Type") as string | null) ?? "";
     } catch { /* display is non-critical */ }
-
-    // Notify the staff member that their request was approved (best-effort)
-    if (staffEmail) {
-      try {
-        const firstName = staffName.split(" ")[0] || staffName;
-        const notesLine = rec.get("Notes") ? `<p style="margin:12px 0 0;color:#666;font-size:13px">Your note: ${String(rec.get("Notes"))}</p>` : "";
-        const staffHtml = `
-          <div style="font-family:Arial,Helvetica,sans-serif;color:#222;max-width:480px">
-            <h2 style="margin:0 0 4px;font-size:18px">Time-off request approved ✓</h2>
-            <p style="margin:0 0 16px;color:#666;font-size:13px">Hi ${firstName}, your request has been approved.</p>
-            <table style="font-size:14px;line-height:1.9;border-collapse:collapse">
-              ${type ? `<tr><td style="color:#666;padding-right:14px">Type</td><td>${type}</td></tr>` : ""}
-              ${dates ? `<tr><td style="color:#666;padding-right:14px">Dates</td><td><b>${dates}</b></td></tr>` : ""}
-            </table>
-            ${notesLine}
-            <p style="margin:16px 0 0;color:#666;font-size:13px">If anything changes, let Adam know as soon as possible.</p>
-          </div>`;
-        await sendEmail({
-          to: staffEmail,
-          subject: `Time off approved — ${dates}`,
-          html: staffHtml,
-        });
-      } catch { /* notification is non-critical */ }
-    }
 
     return html("Approved", `<div class="dot"><svg fill="none" stroke="#0F6E56" stroke-width="2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><h1>Approved</h1><p>${staffName ? `<b>${staffName}</b>'s` : "The"} time-off request${dates ? ` for ${dates}` : ""} has been approved and updated in Airtable.</p>`);
   } catch (err: unknown) {

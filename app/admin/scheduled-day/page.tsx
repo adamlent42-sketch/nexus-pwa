@@ -9,6 +9,7 @@ import { ErrorState } from "@/components/ui/ErrorState";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { TextInput } from "@/components/ui/Field";
 import { formatDate } from "@/lib/utils";
+import { WhosHerePanel } from "@/components/attendance/WhosHerePanel";
 
 interface ScheduledStudent {
   id: string;
@@ -21,11 +22,8 @@ interface ScheduledStudent {
   readingLevel: string | null;
 }
 
-// Days the Center holds class. Schedule is stored as weekday, so we map the
-// chosen calendar date to its weekday and look up who is scheduled that day.
 const CLASS_DAYS = ["Monday", "Tuesday", "Thursday", "Saturday"];
 
-// Today's date as YYYY-MM-DD (local), used as the default selection.
 function todayISO(): string {
   const d = new Date();
   const y = d.getFullYear();
@@ -34,8 +32,6 @@ function todayISO(): string {
   return `${y}-${m}-${day}`;
 }
 
-// Weekday name for a YYYY-MM-DD string, parsed in local time to avoid the
-// UTC off-by-one that `new Date("2026-06-25")` would introduce.
 function weekdayOf(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
   if (!y || !m || !d) return "";
@@ -63,6 +59,8 @@ export default function ScheduledDayPage() {
 
   return (
     <div className="space-y-4">
+      {/* Live attendance panel -- always visible on class days */}
+      {isClassDay && <WhosHerePanel />}
       <div>
         <p className="text-[13px] text-ink-secondary mb-3">
           Pick a date to see which active students are scheduled to come in that day.
@@ -144,7 +142,6 @@ export default function ScheduledDayPage() {
   );
 }
 
-// Given a weekday name, return the YYYY-MM-DD of the next occurrence (today if it matches).
 function nextDateForWeekday(weekday: string): string {
   const target = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].indexOf(weekday);
   const d = new Date();

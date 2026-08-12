@@ -36,6 +36,8 @@ interface Closure {
 interface ScheduleData {
   staffName: string;
   staffEmail: string | null;
+  isDeparting: boolean;
+  departureDate: string | null;
   shifts: Shift[];
   timeOff: TimeOffItem[];
   closures: Closure[];
@@ -232,6 +234,11 @@ export default function SchedulePage() {
                 <Clock className="w-4 h-4 text-ink-secondary" />
                 <p className="text-[13px] font-medium">Your weekly schedule</p>
               </div>
+              {q.data.isDeparting && q.data.departureDate && (
+                <p className="mt-1.5 text-[12px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 inline-block">
+                  Last day: {formatDate(q.data.departureDate)}
+                </p>
+              )}
             </div>
             <div className="divide-y divide-line">
               {q.data.shifts.length === 0 ? (

@@ -62,6 +62,7 @@ export function TodaysInstructionNotes() {
                   <p className="meta-sm mt-0.5">
                     {schedule && <span>{schedule}</span>}
                     {n.dateNoted && <span>{schedule ? " · " : ""}since {formatDate(n.dateNoted, "short")}</span>}
+                    {n.createdBy && <span> · {n.createdBy}</span>}
                   </p>
                   <button
                     onClick={() => forms.openNoteEdit(n)}

@@ -9,6 +9,7 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ErrorState } from "@/components/ui/ErrorState";
 import { LogConversationModal } from "@/components/forms/LogConversationModal";
+import { ClassDayRoster } from "@/components/admin/ClassDayRoster";
 import type { MonthStat } from "@/app/api/admin/monthly-stats/route";
 import type { EnrollmentReportStat } from "@/app/api/admin/enrollment-report/route";
 
@@ -279,6 +280,9 @@ export default function AdminHome() {
         </section>
 
       </div>{/* end charts grid */}
+
+      {/* ── Class Day Roster ── */}
+      <ClassDayRoster />
 
       {/* ── Attention List ── */}
       <div className="max-w-2xl">

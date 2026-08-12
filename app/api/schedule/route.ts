@@ -49,6 +49,9 @@ export async function GET(req: NextRequest) {
 
     const staffName = (staffRec.get("Staff Name") as string | null) ?? "";
     const staffEmail = (staffRec.get("Email") as string | null) ?? null;
+    const staffStatus = (staffRec.get("Status") as { name: string } | null)?.name ?? null;
+    const departureDate = (staffRec.get("fldmrFJwFVKtUY9pU") as string | null) ?? null;
+    const isDeparting = staffStatus === "Departing";
 
     // Recurring shifts only — filter by staffId and exclude one-off Specific Date entries
     const shifts = shiftRecs
@@ -85,7 +88,7 @@ export async function GET(req: NextRequest) {
       notes: (r.get("Notes") as string | null) ?? null
     }));
 
-    return NextResponse.json({ ok: true, data: { staffName, staffEmail, shifts, timeOff, closures } });
+    return NextResponse.json({ ok: true, data: { staffName, staffEmail, isDeparting, departureDate, shifts, timeOff, closures } });
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json({ ok: false, error: msg }, { status: 500 });

@@ -58,5 +58,39 @@ export const TABLE = {
   ComposeRequests: "tblzCDimwtWjTzgZ0",
   TrainingModules: "tbl3pKb1RtClc51Ax",
   TrainingBlocks: "tblLWHhaehIR3AmtG",
-  StaffTrainingProgress: "tbl7sq5qTWOfa5VAw"
+  StaffTrainingProgress: "tbl7sq5qTWOfa5VAw",
+  AttendanceLog: "tblDxJU15EK03joFN"
+} as const;
+
+// AttendanceLog field IDs (pinned)
+export const ATTENDANCE_FIELD = {
+  StudentName: "fld64vP5RnZrvmtDE",      // primary text — denorm name
+  Student: "fldrsSsz1uVbr3El7",           // linked record -> Students
+  Date: "fldx5kCj4imXZhSxG",
+  CheckInTime: "fldkwLzrmCQ3L06xP",
+  CheckOutTime: "fldOo498XNFAsrueh",
+  DurationMinutes: "fldE1Qli2VpSPJLFT",
+  Method: "fld3M6IRbTAZHvKTy",            // Scan | Manual | Auto-closed
+  StreakAtCheckIn: "fldGMWB1wxD9TxRSd",
+  SessionNumber: "fldhY7F7FiaGIPeI3",
+  BirthdayFlag: "fldRVeXhAuJVclmH2",
+  MilestoneTriggered: "fld1tvNUygMNIzujW",
+  ObservationCompletion: "fldx4SBmTq6CcGLdV",
+  ObservationFocus: "fldhY3lefD9ZBCood",
+  ObservationProgress: "fldlljQ1gYkGPt3sB",
+  ObservationNotes: "fldNLiAgUCxH0eZZp",
+  FlagCallParent: "fldiCCpZjEXPTmVEp",
+  FlagAddInstructionNote: "fldkoX5IZ41fsAJLc",
+  ObservationAddedBy: "fldqCVmJ9xGwnGNUw",
+} as const;
+
+// Students table attendance-related field IDs
+export const STUDENT_ATTENDANCE_FIELD = {
+  CurrentWeekStreak: "fldT7pvYnRn8NuDkH",
+  LongestStreak: "fldD2VvRHgtiRLdz3",
+  TotalLifetimeSessions: "fldu3ePC7BloPEI5c",
+  LastAttendedWeek: "fld8Lb7yVwtt5SaEq",
+  DOB: "fldoBEcvJpkSPde7k",
+  FirstName: "fldTPVhwDfZeGk9IS",
+  StudentName: "fldtBKt6SEKobqeoV",
 } as const;

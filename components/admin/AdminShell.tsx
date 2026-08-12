@@ -17,6 +17,7 @@ const TABS = [
   { href: "/admin/students" as const,          label: "Students" },
   { href: "/admin/breaks" as const,            label: "Breaks & holds" },
   { href: "/admin/scheduled-day" as const,     label: "Who's scheduled" },
+  { href: "/admin/qr-labels" as const,         label: "QR labels" },
   { href: "/admin/missing-data" as const,      label: "Missing data" },
   { href: "/admin/outbox" as const,            label: "Email Outbox" },
   { href: "/admin/student-outreach" as const,  label: "Student outreach" },
@@ -30,13 +31,10 @@ const TABS = [
   { href: "/admin/training" as const,          label: "Training" }
 ];
 
-// Admin is an OPEN section (no passphrase) — it's a separator for owner/staff
-// operations, not a security boundary. If a lower-level staff interface is split
-// out later, re-introduce a gate here and in lib/admin-auth.ts:requireAdminPass.
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
-  // Live attention counts → badge the nav tabs that have something waiting.
+  // Live attention counts -> badge the nav tabs that have something waiting.
   const attention = useQuery({
     queryKey: ["admin", "attention"],
     queryFn: () => adminFetch<AttentionData>("/api/admin/attention"),

@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Field, TextInput, Select } from "@/components/ui/Field";
 import { ChipGroup } from "@/components/ui/ChipGroup";
 import { StudentSelect } from "@/components/ui/StudentSelect";
-import { WEEKDAYS, PICKUP_DAYS } from "@/lib/options";
+import { WEEKDAYS, PICKUP_DAYS, LIFECYCLE_STAGES } from "@/lib/options";
 
 interface Picked { id: string; name: string; grade: string | null; status: string | null }
 interface PO { id: string; poDate: string | null; status: string | null; outcome: string | null; plannedStartDate: string | null }
@@ -22,12 +22,6 @@ interface StudentRecord {
   holdStart: string | null; plannedReturn: string | null; breakCheckin: string | null; holdNotes: string | null; invoiceAction: string | null;
   po: PO | null;
 }
-
-const LIFECYCLE = [
-  "Lead", "PO Booked", "Attended PO", "PO Attended - Did Not Enroll", "PO No-Show", "PO Cancelled",
-  "Pending Start", "Pending Start State", "Active-Engaged", "Active-At-Risk", "Planned Break",
-  "Recently Discontinued", "Reactivation Target", "Long Lapsed", "No Interest", "Historical"
-];
 const GRADES = ["PK1", "PK2", "PreK", "K", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13"];
 const PO_STATUS = ["Scheduled", "Rescheduled", "Attended", "Not Attended", "Family Cancelled", "Instructor Cancelled"];
 const PO_OUTCOME = ["Plan to Enroll", "Enrolled", "Undecided", "Not Interested"];
@@ -147,7 +141,7 @@ export default function StudentManagerPage() {
             <Field label="Lifecycle stage">
               <Select value={form.lifecycle ?? ""} onChange={(e) => set("lifecycle", e.target.value || null)}>
                 <option value="">—</option>
-                {LIFECYCLE.map((o) => <option key={o} value={o}>{o}</option>)}
+                {LIFECYCLE_STAGES.map((o) => <option key={o} value={o}>{o}</option>)}
               </Select>
             </Field>
             <Field label="Grade">
