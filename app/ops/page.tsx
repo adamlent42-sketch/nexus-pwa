@@ -112,7 +112,9 @@ function AttendanceTile() {
         const res = await fetch("/api/checkin/active");
         if (res.ok) {
           const data = await res.json();
-          setActive(data.sessions ?? data ?? []);
+          // API returns { ok: true, data: [...] }
+          const sessions = Array.isArray(data.data) ? data.data : Array.isArray(data) ? data : [];
+          setActive(sessions);
         }
       } catch {
         // silently degrade — show 0
@@ -491,14 +493,27 @@ function Clock() {
   return <><span>{date}</span><span className="tabular-nums">{time}</span></>;
 }
 
+// ── Client-only guard (prevents SSR hydration mismatches) ────────────────────
+// The ops dashboard renders time-sensitive content and has robots: noindex.
+// Skipping SSR entirely is the cleanest solution.
+
+function ClientOnly({ children }: { children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return null;
+  return <>{children}</>;
+}
+
 // ── Page export ───────────────────────────────────────────────────────────────
 
 export default function OpsPage() {
   return (
-    <ViewDateProvider>
-      <FormsProvider>
-        <OpsApp />
-      </FormsProvider>
-    </ViewDateProvider>
+    <ClientOnly>
+      <ViewDateProvider>
+        <FormsProvider>
+          <OpsApp />
+        </FormsProvider>
+      </ViewDateProvider>
+    </ClientOnly>
   );
 }
