@@ -10,6 +10,8 @@ interface ActiveSession {
   studentName: string;
   checkInTime: string;
   minutesIn: number;
+  checkedOut: boolean;
+  observationAdded: boolean;
 }
 
 // Option lists (same as existing ObservationModal)
@@ -53,12 +55,11 @@ export function LogObservationModal({ open, onClose }: Props) {
     if (typeof window !== "undefined") {
       setAddedBy(window.localStorage.getItem(STAFF_LS_KEY) ?? "");
     }
-    // Fetch active sessions
+    // Fetch all of today's sessions (active + checked-out)
     setLoadingSessions(true);
-    fetch("/api/checkin/active")
+    adminFetch("/api/admin/checkin/today")
       .then(r => r.json())
       .then(data => {
-        // API returns { ok: true, data: [...] }
         const list: ActiveSession[] = Array.isArray(data.data) ? data.data : [];
         setSessions(list);
       })
@@ -124,7 +125,7 @@ export function LogObservationModal({ open, onClose }: Props) {
             {loadingSessions ? (
               <div className="h-10 bg-surface-muted rounded-lg animate-pulse" />
             ) : sessions.length === 0 ? (
-              <p className="text-[13px] text-ink-secondary italic py-2">No students currently checked in.</p>
+              <p className="text-[13px] text-ink-secondary italic py-2">No sessions recorded today.</p>
             ) : (
               <div className="relative">
                 <select
@@ -138,7 +139,9 @@ export function LogObservationModal({ open, onClose }: Props) {
                   <option value="">Select a student...</option>
                   {sessions.map(s => (
                     <option key={s.id} value={s.id}>
-                      {s.studentName} ({s.minutesIn}m in)
+                      {s.studentName}
+                      {s.checkedOut ? " (checked out)" : ` (${s.minutesIn}m in)`}
+                      {s.observationAdded ? " ✓" : ""}
                     </option>
                   ))}
                 </select>
