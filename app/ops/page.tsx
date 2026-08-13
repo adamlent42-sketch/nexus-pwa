@@ -483,14 +483,20 @@ function OpsApp() {
 
 function Clock() {
   const [time, setTime] = useState("");
+  const [date, setDate] = useState("");
   useEffect(() => {
-    const fmt = () =>
+    const fmtTime = () =>
       new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-    setTime(fmt());
-    const t = setInterval(() => setTime(fmt()), 15_000);
+    const fmtDate = () =>
+      new Date().toLocaleDateString("en-US", {
+        weekday: "long", month: "long", day: "numeric", year: "numeric",
+      });
+    setTime(fmtTime());
+    setDate(fmtDate());
+    const t = setInterval(() => setTime(fmtTime()), 15_000);
     return () => clearInterval(t);
   }, []);
-  return <span className="tabular-nums">{time}</span>;
+  return <><span>{date}</span><span className="tabular-nums">{time}</span></>;
 }
 
 // ── Page export ───────────────────────────────────────────────────────────────
