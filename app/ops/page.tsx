@@ -244,9 +244,9 @@ function Sidebar({ mode, onModeChange }: { mode: Mode; onModeChange: (m: Mode) =
     { label: "Pickup Notice",      icon: <Car className="w-3.5 h-3.5" />,          onClick: forms.openPickup },
     { label: "Log Time Off",       icon: <CalendarOff className="w-3.5 h-3.5" />,  onClick: forms.openTimeOff },
     { label: "Log Conversation",   icon: <Phone className="w-3.5 h-3.5" />,        onClick: forms.openLogConversation },
-    { label: "Create Staff Alert", icon: <AlertTriangle className="w-3.5 h-3.5" />, onClick: () => {} },
-    { label: "Log Observation",    icon: <Eye className="w-3.5 h-3.5" />,          onClick: () => {} },
-    { label: "Instruction Alert",  icon: <Pin className="w-3.5 h-3.5" />,          onClick: () => {} },
+    { label: "Create Staff Alert", icon: <AlertTriangle className="w-3.5 h-3.5" />, onClick: () => forms.openStaffAlert() },
+    { label: "Log Observation",    icon: <Eye className="w-3.5 h-3.5" />,          onClick: () => forms.openLogObservation() },
+    { label: "Instruction Alert",  icon: <Pin className="w-3.5 h-3.5" />,          onClick: () => forms.openInstructionNote() },
   ];
 
   return (
