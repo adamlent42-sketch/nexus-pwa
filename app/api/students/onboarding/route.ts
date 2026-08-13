@@ -225,6 +225,11 @@ export async function GET() {
         }
         return { ...s, startedDate: started, week1, week4 };
       })
+      // Once both touch-points are handled (done or moot), remove from the list.
+      .filter((s) => !(
+        (s.week1.state === "done" || s.week1.state === "moot") &&
+        s.week4.state === "done"
+      ))
       .sort((a, b) => (b.startedDate ?? "").localeCompare(a.startedDate ?? ""));
 
     return NextResponse.json({ ok: true, data: { planned, pastDue, firstMonthWatch } });
