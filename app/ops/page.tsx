@@ -447,14 +447,6 @@ function OpsApp() {
           <span className="text-blue-400">OF WAPPINGERS FALLS</span>
         </h1>
         <div className="ml-auto flex items-center gap-4 text-[12px] text-white/50 font-medium">
-          <span>
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
           <Clock />
         </div>
       </header>
