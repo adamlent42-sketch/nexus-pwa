@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
         filterByFormula: lifecycleFilter,
         sort: [{ field: "Student Name", direction: "asc" }],
         fields: [
-          "Student Name", "First Name", "Subjects", "Schedule", "Lifecycle Stage"
+          "Student Name", "First Name", "Subjects", "Schedule", "Lifecycle Stage", "Work Pickup Day"
         ]
       })
       .all();
@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
       firstName: (r.get("First Name") as string | null) ?? null,
       subjects: ((r.get("Subjects") as string[] | undefined) ?? []),
       schedule: ((r.get("Schedule") as string[] | undefined) ?? []),
+      workPickupDay: (r.get("Work Pickup Day") as string | null) ?? null,
       lifecycle: (r.get("Lifecycle Stage") as string | null) ?? null
     }));
 

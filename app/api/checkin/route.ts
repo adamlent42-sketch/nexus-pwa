@@ -94,9 +94,14 @@ export async function POST(req: NextRequest) {
     const dob = studentRec.get("DOB") as string | null | undefined;
     const subjects = ((studentRec.get("Subjects") as string[] | undefined) ?? []);
     const subjectCount = subjects.length || 1;
+    const mathLevel = (studentRec.get("Math Level") as string | null) ?? null;
+    const readingLevel = (studentRec.get("Reading Level") as string | null) ?? null;
+    const schedule = ((studentRec.get("Schedule") as string[] | undefined) ?? []);
+    const workPickupDay = (studentRec.get("Work Pickup Day") as string | null) ?? null;
     const currentStreak = (studentRec.get("Current Week Streak") as number | null) ?? 0;
     const longestStreak = (studentRec.get("Longest Streak") as number | null) ?? 0;
     const totalSessions = (studentRec.get("Total Lifetime Sessions") as number | null) ?? 0;
+    const totalWeeks = (studentRec.get("Total Lifetime Weeks") as number | null) ?? 0;
     const lastAttendedWeek = (studentRec.get("Last Attended Week") as string | null) ?? "";
 
     const todayISO = etDateISO();
@@ -152,8 +157,13 @@ export async function POST(req: NextRequest) {
           studentName,
           firstName: firstName || studentName.split(" ")[0],
           durationMinutes: duration,
+          totalWeeks,
           subjectCount,
-          subjects
+          subjects,
+          mathLevel,
+          readingLevel,
+          schedule,
+          workPickupDay
         }
       });
     }
@@ -180,6 +190,7 @@ export async function POST(req: NextRequest) {
 
     const newLongest = Math.max(longestStreak, newStreak);
     const newTotalSessions = totalSessions + 1;
+    const newTotalWeeks = weekAlreadyCounted ? totalWeeks : totalWeeks + 1;
 
     // Milestone triggered this check-in?
     const milestoneTriggered = !weekAlreadyCounted && MILESTONES.includes(newStreak)
@@ -204,6 +215,7 @@ export async function POST(req: NextRequest) {
       [STUDENT_ATTENDANCE_FIELD.CurrentWeekStreak]: newStreak,
       [STUDENT_ATTENDANCE_FIELD.LongestStreak]: newLongest,
       [STUDENT_ATTENDANCE_FIELD.TotalLifetimeSessions]: newTotalSessions,
+      [STUDENT_ATTENDANCE_FIELD.TotalLifetimeWeeks]: newTotalWeeks,
       ...(!weekAlreadyCounted ? { [STUDENT_ATTENDANCE_FIELD.LastAttendedWeek]: currentWeekSunday } : {})
     });
 
@@ -218,8 +230,13 @@ export async function POST(req: NextRequest) {
         milestoneTriggered,
         birthdayFlag,
         sessionNumber: newTotalSessions,
+        totalWeeks: newTotalWeeks,
         subjectCount,
-        subjects
+        subjects,
+        mathLevel,
+        readingLevel,
+        schedule,
+        workPickupDay
       }
     });
 

@@ -82,6 +82,8 @@ export const ATTENDANCE_FIELD = {
   FlagCallParent: "fldiCCpZjEXPTmVEp",
   FlagAddInstructionNote: "fldkoX5IZ41fsAJLc",
   ObservationAddedBy: "fldqCVmJ9xGwnGNUw",
+  ObservationPages: "fldMBHnkksuMmNZLc",
+  ObservationTime: "fldGujh1SMrF1KLKe",
 } as const;
 
 // Students table attendance-related field IDs
@@ -89,6 +91,7 @@ export const STUDENT_ATTENDANCE_FIELD = {
   CurrentWeekStreak: "fldT7pvYnRn8NuDkH",
   LongestStreak: "fldD2VvRHgtiRLdz3",
   TotalLifetimeSessions: "fldu3ePC7BloPEI5c",
+  TotalLifetimeWeeks: "fldBmihdc7gV5MVts",
   LastAttendedWeek: "fld8Lb7yVwtt5SaEq",
   DOB: "fldoBEcvJpkSPde7k",
   FirstName: "fldTPVhwDfZeGk9IS",

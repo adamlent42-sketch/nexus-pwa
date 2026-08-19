@@ -9,8 +9,8 @@ type KioskState =
   | { type: "idle" }
   | { type: "manual" }
   | { type: "loading" }
-  | { type: "checkin"; firstName: string; streak: number; milestone: number | null; birthday: boolean; subjects: string[] }
-  | { type: "checkout"; firstName: string; durationMinutes: number; subjects: string[] }
+  | { type: "checkin"; firstName: string; streak: number; totalWeeks: number; milestone: number | null; birthday: boolean; subjects: string[]; mathLevel: string | null; readingLevel: string | null; workPickupDay: string | null; schedule: string[] }
+  | { type: "checkout"; firstName: string; durationMinutes: number; totalWeeks: number; subjects: string[]; mathLevel: string | null; readingLevel: string | null; workPickupDay: string | null; schedule: string[] }
   | { type: "unknown" }
   | { type: "ignored"; firstName: string };
 
@@ -22,8 +22,13 @@ interface CheckinResponse {
   milestoneTriggered?: number | null;
   birthdayFlag?: boolean;
   durationMinutes?: number;
+  totalWeeks?: number;
   subjects?: string[];
   subjectCount?: number;
+  mathLevel?: string | null;
+  readingLevel?: string | null;
+  workPickupDay?: string | null;
+  schedule?: string[];
 }
 
 interface StudentRow {
@@ -36,7 +41,7 @@ interface StudentRow {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const RESET_DELAY_MS = 4000; // return to idle after showing result
+const RESET_DELAY_MS = 5500; // return to idle after showing result
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -115,16 +120,26 @@ export default function KioskPage() {
             type: "checkin",
             firstName: fn,
             streak: d.streak ?? 0,
+            totalWeeks: d.totalWeeks ?? 0,
             milestone: d.milestoneTriggered ?? null,
             birthday: d.birthdayFlag ?? false,
-            subjects
+            subjects,
+            mathLevel: d.mathLevel ?? null,
+            readingLevel: d.readingLevel ?? null,
+            workPickupDay: d.workPickupDay ?? null,
+            schedule: d.schedule ?? []
           });
         } else if (d.direction === "out") {
           setState({
             type: "checkout",
             firstName: fn,
             durationMinutes: d.durationMinutes ?? 0,
-            subjects
+            totalWeeks: d.totalWeeks ?? 0,
+            subjects,
+            mathLevel: d.mathLevel ?? null,
+            readingLevel: d.readingLevel ?? null,
+            workPickupDay: d.workPickupDay ?? null,
+            schedule: d.schedule ?? []
           });
         } else if (d.direction === "ignored") {
           setState({ type: "ignored", firstName: fn });
@@ -232,40 +247,179 @@ function LoadingScreen() {
   );
 }
 
-function CheckInScreen({ s }: { s: Extract<KioskState, { type: "checkin" }> }) {
-  const isMilestone = !!s.milestone;
-  const isBirthday = s.birthday;
+// ── Level Roadmap ─────────────────────────────────────────────────────────────
+
+// Full Kumon level progression (math and reading share the same sequence)
+const KUMON_LEVELS = ["7A","6A","5A","4A","3A","2A","A","B","C","D","E","F","G","H","I","J"];
+
+function LevelRoadmap({
+  label,
+  level,
+  color
+}: {
+  label: string;
+  level: string | null;
+  color: string;
+}) {
+  const upper = (level ?? "").toUpperCase();
+  const currentIdx = KUMON_LEVELS.indexOf(upper);
+
+  // If level isn't recognised, show a simple placeholder card
+  if (currentIdx === -1) {
+    return (
+      <div className="flex flex-col items-center gap-2">
+        <div className="text-[13px] font-semibold uppercase tracking-widest opacity-60" style={{ color }}>{label}</div>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center font-black text-[26px]"
+          style={{ background: `${color}18`, border: `2px solid ${color}40`, color }}>
+          {upper || "—"}
+        </div>
+      </div>
+    );
+  }
+
+  // Show 2 before current, current, 2 after — window of 5
+  const startIdx = Math.max(0, currentIdx - 2);
+  const endIdx   = Math.min(KUMON_LEVELS.length - 1, currentIdx + 2);
+  const visible  = KUMON_LEVELS.slice(startIdx, endIdx + 1);
 
   return (
-    <div className="flex flex-col items-center gap-6 text-center px-8 max-w-[900px]">
-      {isBirthday && (
-        <div className="text-[72px] leading-none animate-bounce">🎂</div>
-      )}
-      {isMilestone && !isBirthday && (
-        <div className="text-[72px] leading-none">{getStreakEmoji(s.milestone!)}</div>
-      )}
-      <div
-        className={`font-display font-black leading-tight ${isBirthday || isMilestone ? "text-[60px]" : "text-[80px]"}`}
-        style={{ color: isBirthday ? "#e91e8c" : "#3F5AA8" }}
-      >
-        {isBirthday ? `Happy Birthday Week, ${s.firstName}!` : `Welcome, ${s.firstName}!`}
+    <div className="flex flex-col items-center gap-3">
+      <div className="text-[13px] font-semibold uppercase tracking-widest" style={{ color, opacity: 0.7 }}>{label}</div>
+      <div className="flex items-center">
+        {visible.map((lvl, i) => {
+          const lvlIdx   = KUMON_LEVELS.indexOf(lvl);
+          const isCur    = lvl === upper;
+          const isPast   = lvlIdx < currentIdx;
+          const dotSize  = isCur ? 72 : 48;
+          const fontSize = isCur ? 30 : 18;
+
+          return (
+            <div key={lvl} className="flex items-center">
+              {/* connector line before each node except first */}
+              {i > 0 && (
+                <div
+                  style={{
+                    width: 28,
+                    height: 3,
+                    borderRadius: 2,
+                    background: isPast || isCur ? color : `${color}22`,
+                    opacity: isPast || isCur ? 1 : 0.5,
+                  }}
+                />
+              )}
+              <div
+                className="flex items-center justify-center rounded-full font-black leading-none transition-all"
+                style={{
+                  width: dotSize,
+                  height: dotSize,
+                  fontSize,
+                  background: isCur ? color : isPast ? `${color}22` : `${color}0a`,
+                  color: isCur ? "white" : isPast ? color : `${color}55`,
+                  border: `${isCur ? 3 : 2}px solid ${isCur ? color : isPast ? `${color}55` : `${color}22`}`,
+                  boxShadow: isCur ? `0 0 0 6px ${color}18` : "none",
+                }}
+              >
+                {lvl}
+              </div>
+            </div>
+          );
+        })}
       </div>
-      {isMilestone && (
-        <div className="bg-yellow-400 text-yellow-900 font-display font-black text-[40px] px-8 py-4 rounded-2xl shadow-lg">
-          🏆 {s.milestone}-Week Streak!
+    </div>
+  );
+}
+
+// ── Streak + Total Weeks block ────────────────────────────────────────────────
+
+function StreakBlock({
+  streak,
+  totalWeeks,
+  milestone,
+  compact = false,
+}: {
+  streak: number;
+  totalWeeks: number;
+  milestone: number | null;
+  compact?: boolean;
+}) {
+  if (milestone) {
+    return (
+      <div className="flex flex-col items-center gap-3">
+        <div className="bg-yellow-400 text-yellow-900 font-display font-black rounded-2xl shadow-lg px-6 py-3 text-center"
+          style={{ fontSize: compact ? 28 : 36 }}>
+          🏆 {milestone}-Week Streak!
+        </div>
+        {totalWeeks > 0 && (
+          <div className="text-ink-tertiary font-body" style={{ fontSize: compact ? 16 : 18 }}>
+            {totalWeeks} total weeks
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="flex items-baseline gap-2">
+        <span className="font-display font-black" style={{ color: "#3F5AA8", fontSize: compact ? 44 : 56, lineHeight: 1 }}>
+          {streak}
+        </span>
+        <span className="text-ink-tertiary font-body" style={{ fontSize: compact ? 15 : 17 }}>
+          {streak === 1 ? "week" : "weeks"}<br />in a row
+        </span>
+      </div>
+      {totalWeeks > 0 && (
+        <div className="text-ink-tertiary font-body mt-1" style={{ fontSize: compact ? 14 : 16 }}>
+          {getStreakEmoji(streak)} {totalWeeks} total weeks
         </div>
       )}
-      {!isMilestone && s.streak > 0 && (
-        <div className="text-[28px] text-ink-secondary font-body">
-          {getStreakEmoji(s.streak)} Week streak: <strong>{s.streak}</strong>
+    </div>
+  );
+}
+
+// ── Check-In / Check-Out screens ──────────────────────────────────────────────
+
+function CheckInScreen({ s }: { s: Extract<KioskState, { type: "checkin" }> }) {
+  const isBirthday = s.birthday;
+  const hasMath    = s.subjects.some((x) => x.toLowerCase() === "math");
+  const hasReading = s.subjects.some((x) => x.toLowerCase() === "reading");
+  const dualSubject = hasMath && hasReading;
+
+  const greetColor = isBirthday ? "#e91e8c" : "#3F5AA8";
+  const greeting   = isBirthday
+    ? `Happy Birthday Week, ${s.firstName}! 🎂`
+    : `Welcome, ${s.firstName}!`;
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-6 px-8 text-center">
+      {/* Name */}
+      <div className="font-display font-black leading-tight" style={{ color: greetColor, fontSize: "clamp(44px,6vw,80px)" }}>
+        {greeting}
+      </div>
+
+      {dualSubject ? (
+        /* ── Two subjects: Reading | Streak | Math ── */
+        <div className="flex items-center justify-center gap-8 w-full max-w-[1100px]">
+          <div className="flex-1 flex justify-end">
+            <LevelRoadmap label="Reading" level={s.readingLevel} color="#0d7d62" />
+          </div>
+          <div className="shrink-0 flex flex-col items-center">
+            <StreakBlock streak={s.streak} totalWeeks={s.totalWeeks} milestone={s.milestone} />
+          </div>
+          <div className="flex-1 flex justify-start">
+            <LevelRoadmap label="Math" level={s.mathLevel} color="#3F5AA8" />
+          </div>
+        </div>
+      ) : (
+        /* ── Single subject: centered ── */
+        <div className="flex flex-col items-center gap-4">
+          <StreakBlock streak={s.streak} totalWeeks={s.totalWeeks} milestone={s.milestone} />
+          {hasMath && <LevelRoadmap label="Math" level={s.mathLevel} color="#3F5AA8" />}
+          {hasReading && <LevelRoadmap label="Reading" level={s.readingLevel} color="#0d7d62" />}
         </div>
       )}
-      {s.subjects.length > 0 && (
-        <div className="text-[22px] text-ink-tertiary font-body">
-          {s.subjects.join(" + ")} today
-        </div>
-      )}
-      <div className="text-[20px] text-status-success-fg font-body font-medium mt-2">
+
+      <div className="text-[20px] text-status-success-fg font-body font-medium">
         ✓ Checked in
       </div>
     </div>
@@ -273,17 +427,53 @@ function CheckInScreen({ s }: { s: Extract<KioskState, { type: "checkin" }> }) {
 }
 
 function CheckOutScreen({ s }: { s: Extract<KioskState, { type: "checkout" }> }) {
+  const hasMath    = s.subjects.some((x) => x.toLowerCase() === "math");
+  const hasReading = s.subjects.some((x) => x.toLowerCase() === "reading");
+  const dualSubject = hasMath && hasReading;
+
   return (
-    <div className="flex flex-col items-center gap-6 text-center px-8 max-w-[900px]">
-      <div className="text-[64px] leading-none">👋</div>
-      <div className="font-display font-black text-[80px] leading-tight text-brand">
-        See you next time, {s.firstName}!
+    <div className="w-full h-full flex flex-col items-center justify-center gap-6 px-8 text-center">
+      {/* Name */}
+      <div className="font-display font-black leading-tight text-brand" style={{ fontSize: "clamp(40px,5.5vw,72px)" }}>
+        👋 See you next time, {s.firstName}!
       </div>
-      <div className="text-[32px] text-ink-secondary font-body">
-        {formatDuration(s.durationMinutes)} today
-        {s.subjects.length > 0 && ` · ${s.subjects.join(" + ")}`}
-      </div>
-      <div className="text-[20px] text-status-success-fg font-body font-medium mt-2">
+
+      {dualSubject ? (
+        /* ── Two subjects: Reading | Duration+Weeks | Math ── */
+        <div className="flex items-center justify-center gap-8 w-full max-w-[1100px]">
+          <div className="flex-1 flex justify-end">
+            <LevelRoadmap label="Reading" level={s.readingLevel} color="#0d7d62" />
+          </div>
+          <div className="shrink-0 flex flex-col items-center gap-1">
+            <div className="font-display font-black text-ink-primary" style={{ fontSize: "clamp(32px,4vw,52px)", lineHeight: 1 }}>
+              {formatDuration(s.durationMinutes)}
+            </div>
+            <div className="text-ink-tertiary text-[15px]">today</div>
+            {s.totalWeeks > 0 && (
+              <div className="text-ink-tertiary text-[15px] mt-2">
+                🗓 {s.totalWeeks} total weeks
+              </div>
+            )}
+          </div>
+          <div className="flex-1 flex justify-start">
+            <LevelRoadmap label="Math" level={s.mathLevel} color="#3F5AA8" />
+          </div>
+        </div>
+      ) : (
+        /* ── Single subject: centered ── */
+        <div className="flex flex-col items-center gap-4">
+          <div className="font-display font-black text-ink-primary" style={{ fontSize: "clamp(36px,4.5vw,56px)", lineHeight: 1 }}>
+            {formatDuration(s.durationMinutes)} today
+          </div>
+          {s.totalWeeks > 0 && (
+            <div className="text-ink-tertiary text-[17px]">🗓 {s.totalWeeks} total weeks</div>
+          )}
+          {hasMath && <LevelRoadmap label="Math" level={s.mathLevel} color="#3F5AA8" />}
+          {hasReading && <LevelRoadmap label="Reading" level={s.readingLevel} color="#0d7d62" />}
+        </div>
+      )}
+
+      <div className="text-[20px] text-status-success-fg font-body font-medium">
         ✓ Checked out
       </div>
     </div>

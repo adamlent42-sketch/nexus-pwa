@@ -14,6 +14,7 @@ interface Student {
   firstName: string | null;
   subjects: string[];
   schedule: string[];
+  workPickupDay: string | null;
   lifecycle: string | null;
 }
 
@@ -161,6 +162,7 @@ export default function QrLabelsPage() {
                 <p className="meta mt-0.5">
                   {s.subjects.join(" + ")}
                   {s.schedule.length > 0 && ` · ${s.schedule.map((d) => d.slice(0, 3)).join("/")} `}
+                  {s.workPickupDay && ` · Pickup: ${s.workPickupDay}`}
                 </p>
                 <p className="meta-sm text-ink-tertiary mt-0.5 font-mono">{s.id}</p>
               </div>
@@ -219,6 +221,11 @@ function PrintSheet({ students, onBack }: { students: Student[]; onBack: () => v
               {s.subjects.join(" + ")}
               {s.schedule.length > 0 && ` · ${s.schedule.map((d: string) => d.slice(0, 3)).join("/")} `}
             </div>
+            {s.workPickupDay && (
+              <div style={{ fontSize: 8, color: "#888", textAlign: "center", marginTop: 1 }}>
+                Pickup: {s.workPickupDay}
+              </div>
+            )}
           </div>
         ))}
       </div>
