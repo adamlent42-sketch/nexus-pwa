@@ -217,15 +217,9 @@ function PrintSheet({ students, onBack }: { students: Student[]; onBack: () => v
             <div style={{ fontSize: 11, fontWeight: 700, textAlign: "center", marginTop: 4, lineHeight: 1.2 }}>
               {s.student}
             </div>
-            <div style={{ fontSize: 9, color: "#666", textAlign: "center", marginTop: 2 }}>
-              {s.subjects.join(" + ")}
-              {s.schedule.length > 0 && ` · ${s.schedule.map((d: string) => d.slice(0, 3)).join("/")} `}
+            <div style={{ fontSize: 9, color: "#555", textAlign: "center", marginTop: 2 }}>
+              {s.workPickupDay ? `Pickup: ${s.workPickupDay}` : s.subjects.join(" + ")}
             </div>
-            {s.workPickupDay && (
-              <div style={{ fontSize: 8, color: "#888", textAlign: "center", marginTop: 1 }}>
-                Pickup: {s.workPickupDay}
-              </div>
-            )}
           </div>
         ))}
       </div>
